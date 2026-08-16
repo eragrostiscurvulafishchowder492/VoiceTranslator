@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // 测试实验室（17.7）：TTS A/B、设备测试、结果回放。
 import { onMounted, ref } from "vue";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { api } from "../api";
 
 const text = ref("你们先过去，我拿一下东西，马上回来。");
@@ -34,8 +35,8 @@ async function testDevices() {
 }
 
 function convertSrc(p: string) {
-  // Windows 路径转 file URL 供 <audio> 播放
-  return "file:///" + p.replace(/\\/g, "/");
+  // 经 Tauri asset 协议访问本地 WAV（file:// 在 WebView 中被禁）
+  return convertFileSrc(p);
 }
 </script>
 

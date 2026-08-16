@@ -38,6 +38,10 @@ pub fn mark_clean_exit(app: App) -> Result<(), String> {
 
 // ================= 设备 =================
 #[tauri::command]
+pub fn get_startup_page(app: App) -> Result<Option<String>, String> {
+    Ok(app.startup_page.lock().clone())
+}
+#[tauri::command]
 pub fn list_devices() -> Result<Vec<voice_audio_engine::devices::DeviceInfo>, String> {
     Ok(voice_audio_engine::devices::list_devices())
 }
@@ -200,11 +204,20 @@ pub fn start_pipeline(app: App, graph_json: String) -> Result<serde_json::Value,
         ptt_active: Box::new(move || ptt.load(Ordering::Relaxed)),
     });
 
-    // 5) 插件桥 + 引擎启动
+    // 5) 插件桥 + 节点实例 Configure（参数与 __node_type__ 路由键下发）+ 引擎启动
     let mut bridges: std::collections::HashMap<String, Arc<dyn PluginBridge>> = std::collections::HashMap::new();
     for pid in &needed {
         if let Some(b) = app.plugins.ensure_bridge(pid) {
             bridges.insert(pid.clone(), b);
+        }
+    }
+    for n in &g.nodes {
+        if let Some(pid) = n.node_type.split('/').next().filter(|s| s.contains('.')) {
+            let short = n.node_type.split_once('/').map(|(_, t)| t).unwrap_or("");
+            let params = serde_json::to_string(&n.params).unwrap_or_else(|_| "{}".into());
+            if let Err(e) = app.plugins.configure_node(pid, short, &n.id, &params) {
+                return Err(format!("节点 {} 配置下发失败: {e}", n.label));
+            }
         }
     }
     let mut engine = ExecutionEngine::new(g, bridge, bridges, app.engine_events.clone());
@@ -263,6 +276,18 @@ pub fn pipeline_control(app: App, signal: String) -> Result<(), String> {
 }
 
 // ================= 插件 =================
+#[tauri::command]
+pub fn plugin_prepare_env(app: App, id: String) -> Result<serde_json::Value, String> {
+    let (ms, log) = app.plugins.prepare_env(&id).map_err(|e| e.to_string())?;
+    app.rebuild_registry();
+    app.logring.push("INFO", "plugin", format!("环境创建完成 {id} ({ms}ms)"));
+    Ok(serde_json::json!({"ok": true, "ms": ms, "log": log}))
+}
+
+#[tauri::command]
+pub fn plugin_env_status(app: App, id: String) -> Result<bool, String> {
+    Ok(app.plugins.env_exists(&id))
+}
 #[tauri::command]
 pub fn plugin_list(app: App) -> Result<serde_json::Value, String> {
     Ok(serde_json::to_value(app.plugins.list_status()).unwrap())
@@ -357,8 +382,25 @@ pub fn settings_get(app: App) -> Result<serde_json::Value, String> {
 }
 
 #[tauri::command]
-pub fn settings_set(app: App, settings: serde_json::Value) -> Result<(), String> {
-    app.store.set_setting("ui_settings", &settings.to_string()).map_err(|e| e.to_string())
+pub fn settings_set(app_handle: tauri::AppHandle, app: App, settings: serde_json::Value) -> Result<(), String> {
+    app.store.set_setting("ui_settings", &settings.to_string()).map_err(|e| e.to_string())?;
+    // 热键即时重注册
+    use tauri_plugin_global_shortcut::{GlobalShortcutExt, Shortcut};
+    let gs = app_handle.global_shortcut();
+    let _ = gs.unregister_all();
+    let hk = settings.get("hotkeys").cloned().unwrap_or(json!({}));
+    let mut registered = Vec::new();
+    for key in ["ptt", "mute", "clear_queue", "interrupt"] {
+        if let Some(k) = hk.get(key).and_then(|v| v.as_str()) {
+            if !k.is_empty() {
+                if let Ok(sc) = Shortcut::try_from(k) {
+                    if gs.register(sc).is_ok() { registered.push(k.to_string()); }
+                }
+            }
+        }
+    }
+    app.logring.push("INFO", "hotkey", format!("热键已重注册: {registered:?}"));
+    Ok(())
 }
 
 // ================= 测试实验室：Voice A/B（真实 TTS 输出 WAV + TTFA）=================

@@ -22,7 +22,7 @@ voice-resource-manager = { path = "../../../crates/resource-manager" }
 voice-persistence = { path = "../../../crates/persistence" }
 voice-diagnostics = { path = "../../../crates/diagnostics" }
 
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["protocol-asset"] }
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-dialog = "2"
 serde = { workspace = true }
@@ -37,3 +37,6 @@ uuid = { workspace = true }
 [features]
 # 此特性用于 cargo test 避免需要 GUI 环境
 test-headless = []
+
+[dev-dependencies]
+serial_test = "3"

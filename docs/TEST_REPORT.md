@@ -1,10 +1,21 @@
 # Test Report — Voice Studio
 
-日期：2026-08-16 · 环境：Windows 11 · RTX 4060 Laptop 8GB · Rust 1.97.1 · Python 3.12.9
+日期：2026-08-16（发布前更新）· 环境：Windows 11 · RTX 4060 Laptop 8GB · Rust 1.97.1 · Python 3.12.9
 
 > 全部结果来自真实运行，原始日志在 `logs/`。复现：`.\scripts\test.ps1`。
 
-## 1. Rust 单元 + 集成测试（19 通过 / 0 失败）
+## 0. 发布前新增验证（本轮补齐）
+
+| 项 | 结果 | 证据 |
+|---|---|---|
+| **实机麦克风采集** | PASS：HECATE G2 默认输入，3s 采集 131712 帧，RMS 0.0066 / peak 0.2544（检测到环境声），44.1kHz 自动处理，**溢出=0** | `cargo run -p voice-audio-engine --example mic_probe` |
+| **GUI 十页视觉验证** | PASS：`--page=<id>` 深链接逐页截图（logs/screenshots/*.png），节点编辑器带预置管线 9 节点+连线完整渲染 | 10 张截图 |
+| **桌面命令层 E2E** | PASS：text.manual_input → textkit.to_tts（真实 worker）经 **插件自动启动→Configure 下发→桥接→引擎调度** 产出正确 tts.request（3.9s） | logs/desktop_e2e.log |
+| **Configure 缺失 bug 修复** | 发现并修复：start_pipeline 原先不下发节点参数（含 `__node_type__` 路由键），插件节点全部失效 | 同上测试覆盖 |
+| **隔离 venv 闭环** | PASS：tonegen 声明 isolated，自动创建 venv + SDK 依赖 + 握手 + 节点缓存（17.2s） | registry 15→25 节点 |
+| **节点类型缓存** | 插件未运行时编辑器也能加载/校验预置管线（Warning 提示"启动时自动启动"，不再阻断） | studio2.png |
+
+## 1. Rust 单元 + 集成测试（21 通过 / 0 失败）
 
 `cargo test --workspace --exclude voice-studio-desktop`（logs/rust_tests.log）
 
@@ -14,6 +25,8 @@
 | plugin-host 单元 | 6 | manifest 解析/校验、**未知权限解析期拒绝**、**api_version 主版本协商**、ZIP 安装往返 + checksums、**zip-slip 路径穿越拒绝**、**重启退避递增 + 次数上限** |
 | persistence | 2 | 版本化迁移、管线 CRUD + 默认唯一、last_known_good、会话状态、声音档案、事件 |
 | plugin-host 集成 | 1 | **宿主⇄真实 Python worker 全生命周期**（见下） |
+| 桌面命令层 E2E | 1 | **插件自动启动 + Configure 下发 + 桥接 + 引擎调度**（真实 worker，见第 0 节） |
+| 桌面原生管线 | 1 | WAV 文件→+6dB 增益→录制（48000 样本数值验证） |
 
 ### 插件生命周期集成测试（最关键验收证据，logs/lifecycle_test.log）
 
@@ -71,5 +84,5 @@ AI PIPELINE SMOKE PASS
 
 1. 设备拔插/OOM/断流的故障注入为部分实现（热插拔轮询已实现并有保护逻辑，
    自动化注入测试未写）。
-2. GUI 自动化 E2E 未实现（需 Windows UIA/Playwright 方案）。
-3. 隔离 venv 演示插件（tone_gen）的"环境修复"命令为 GUI 预留，CLI 尚未实现自动创建。
+2. GUI 交互级自动化（点击/拖拽）未实现；视觉渲染已用截图验证覆盖。
+3. VB-CABLE 虚拟输出：本机未安装，无法实测（逻辑与检测已实现）。

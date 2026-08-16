@@ -52,6 +52,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::app_init,
             commands::mark_clean_exit,
+            commands::get_startup_page,
             commands::list_devices,
             commands::resource_snapshot,
             commands::node_registry,
@@ -64,6 +65,8 @@ pub fn run() {
             commands::pipeline_snapshot,
             commands::pipeline_control,
             commands::plugin_list,
+            commands::plugin_prepare_env,
+            commands::plugin_env_status,
             commands::plugin_start,
             commands::plugin_stop,
             commands::plugin_enable,

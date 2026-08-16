@@ -16,7 +16,6 @@ async function install() {
   const f = await open({ filters: [{ name: "插件包", extensions: ["zip"] }] });
   if (!f) return;
   try {
-    const p = plugins.value.find(() => false); // 权限预览在安装后展示
     const id = await api.pluginInstall(String(f));
     msg.value = `已安装 ${id}。请检查权限声明。`;
     await reload();
@@ -38,6 +37,14 @@ async function uninstall(id: string) {
 async function showLogs(id: string) {
   logsOf.value[id] = await api.pluginLogs(id, 80);
   selected.value = id;
+}
+
+async function repairEnv(p: any) {
+  msg.value = `创建独立环境 ${p.id} …`;
+  try {
+    const r = await api.pluginPrepareEnv(p.id);
+    msg.value = `独立环境创建完成（${r.ms}ms），可以启动插件了`;
+  } catch (e: any) { msg.value = `环境创建失败：${e}`; }
 }
 </script>
 
@@ -67,6 +74,7 @@ async function showLogs(id: string) {
               <button v-if="p.state !== 'running'" @click="start(p.id)">启动</button>
               <button v-else @click="stop(p.id)">停止</button>
               <button @click="toggle(p)">{{ p.enabled ? "禁用" : "启用" }}</button>
+              <button v-if="p.python_env === 'isolated'" @click="repairEnv(p)">修复环境</button>
               <button @click="showLogs(p.id)">日志</button>
               <button class="danger" @click="uninstall(p.id)">卸载</button>
             </td>

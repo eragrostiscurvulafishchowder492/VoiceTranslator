@@ -28,7 +28,7 @@ async function importModel() {
       local_path: dir, size_bytes: size, license: "user-imported",
       verified: false, last_used_at: new Date().toISOString(),
     });
-    msg.value = `已登记 {id}（待校验）`;
+    msg.value = `已登记 ${id}（待校验）`;
     await reload();
   } catch (e: any) { msg.value = String(e); }
 }

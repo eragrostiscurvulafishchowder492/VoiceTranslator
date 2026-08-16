@@ -20,6 +20,9 @@ const search = ref("");
 const categories = ref<[string, any[]][]>([]);
 onMounted(async () => {
   await reloadAll();
+  // 自动加载默认管线（若有）
+  const def = pipelines.value.find((p: any) => p.is_default) ?? pipelines.value[0];
+  if (def) await load(def.id);
 });
 
 async function reloadAll() {

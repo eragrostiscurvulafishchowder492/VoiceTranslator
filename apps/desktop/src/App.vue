@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { invoke } from "@tauri-apps/api/core";
 import { api } from "./api";
 import Home from "./pages/Home.vue";
 import LiveVoice from "./pages/LiveVoice.vue";
@@ -32,6 +33,11 @@ const lastKnownGood = ref<string | null>(null);
 onMounted(async () => {
   try {
     init.value = await api.appInit();
+    // 启动参数 --page=<id> 深链接（如 --page=studio）
+    try {
+      const page = await invoke<string | null>("get_startup_page");
+      if (page && pages.some(p => p.id === page)) active.value = page;
+    } catch {}
     if (init.value.abnormal_exit) {
       lastKnownGood.value = init.value.last_known_good;
       showRecovery.value = true;

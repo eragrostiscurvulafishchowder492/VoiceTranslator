@@ -26,6 +26,8 @@ pub struct AppState {
     pub engine_events: Sender<EngineEvent>,
     pub ptt_active: Arc<AtomicBool>,
     pub muted: Arc<AtomicBool>,
+    /// 启动参数 --page=<id> 指定的初始页面（深链接）
+    pub startup_page: parking_lot::Mutex<Option<String>>,
 }
 
 impl AppState {
@@ -69,17 +71,30 @@ impl AppState {
             engine_events: tx,
             ptt_active: Arc::new(AtomicBool::new(true)),
             muted: Arc::new(AtomicBool::new(false)),
+            startup_page: parking_lot::Mutex::new(
+                std::env::args().skip(1)
+                    .find_map(|a| a.strip_prefix("--page=").map(|s| s.to_string()))),
         })
     }
 
-    /// 内置 + 已运行插件的节点类型合并注册表。
+    /// 内置 + 插件节点类型合并注册表。
+    /// 运行中的插件用握手实时结果；未运行的插件用上次握手的 DB 缓存
+    /// （编辑器在插件未启动时也能看到/校验其节点）。
     pub fn rebuild_registry(&self) {
         let mut reg = voice_pipeline_core::native::builtin_registry();
         for st in self.plugins.list_status() {
-            if st.state != "running" { continue; }
-            // 从 plugin-host 获取握手后的 node_types
-            if let Some(specs) = self.plugins.node_type_specs(&st.id) {
-                for spec in specs { reg.register(spec); }
+            if st.state == "running" {
+                if let Some(specs) = self.plugins.node_type_specs(&st.id) {
+                    // 刷新缓存
+                    if let Ok(json) = serde_json::to_string(&specs) {
+                        let _ = self.store.set_setting(&format!("nodes_cache/{}", st.id), &json);
+                    }
+                    for spec in specs { reg.register(spec); }
+                }
+            } else if let Some(json) = self.store.get_setting(&format!("nodes_cache/{}", st.id)) {
+                if let Ok(specs) = serde_json::from_str::<Vec<voice_pipeline_core::graph::NodeSpec>>(&json) {
+                    for spec in specs { reg.register(spec); }
+                }
             }
         }
         *self.registry.write() = reg;

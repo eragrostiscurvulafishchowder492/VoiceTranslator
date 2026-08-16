@@ -46,19 +46,20 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
     for n in &graph.nodes {
         let is_plugin_node = n.node_type.contains('/');
         if registry.get(&n.node_type).is_none() {
-            let (code, msg) = if is_plugin_node {
+            let (level, code, msg) = if is_plugin_node {
                 let plugin_id = n.node_type.split('/').next().unwrap_or("");
                 if !(ext.is_plugin_installed)(plugin_id) {
-                    ("PLUGIN_MISSING", format!("插件 {plugin_id} 未安装或被禁用"))
+                    (Severity::Error, "PLUGIN_MISSING", format!("插件 {plugin_id} 未安装或被禁用"))
                 } else {
-                    ("UNKNOWN_NODE_TYPE", format!(
-                        "节点类型 {} 未注册（插件已安装但未运行？启动插件后重试）", n.node_type))
+                    // 已安装未运行：启动管线时会自动拉起 worker，可校验性受限但不阻塞
+                    (Severity::Warning, "PLUGIN_NOT_RUNNING", format!(
+                        "插件 {plugin_id} 未运行，端口暂无法校验（启动管线时自动启动）"))
                 }
             } else {
-                ("UNKNOWN_NODE_TYPE", format!("未知节点类型 {}", n.node_type))
+                (Severity::Error, "UNKNOWN_NODE_TYPE", format!("未知节点类型 {}", n.node_type))
             };
             issues.push(ValidationIssue {
-                level: Severity::Error,
+                level,
                 code: code.into(),
                 message: msg,
                 node_id: Some(n.id.clone()),

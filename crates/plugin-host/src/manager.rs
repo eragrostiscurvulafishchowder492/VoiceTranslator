@@ -139,6 +139,64 @@ impl PluginManager {
         self.plugins.read().contains_key(plugin_id)
     }
 
+    /// 为声明 isolated 环境的插件创建独立 venv（创建/修复/重建共用）。
+    /// 返回 (创建耗时 ms, 输出摘要)。
+    pub fn prepare_env(&self, id: &str) -> anyhow::Result<(u64, String)> {
+        let (manifest, env_dir, req_file) = {
+            let map = self.plugins.read();
+            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let dir = self.paths.plugin_envs().join(id.replace(['.', '/'], "_"));
+            (e.manifest.clone(), dir, e.manifest.runtime_requirements.requirements_file.clone())
+        };
+        anyhow::ensure!(manifest.runtime_requirements.python_env == "isolated",
+            "插件 {} 未声明 isolated 环境", id);
+        let main_py = self.repo_root.join(".venv").join("Scripts").join("python.exe");
+        anyhow::ensure!(main_py.exists(), "主 Python 环境不存在: {}", main_py.display());
+
+        let t0 = std::time::Instant::now();
+        if env_dir.exists() {
+            std::fs::remove_dir_all(&env_dir)?;
+        }
+        std::fs::create_dir_all(env_dir.parent().unwrap_or(&env_dir))?;
+        let out = std::process::Command::new(&main_py)
+            .args(["-m", "venv", env_dir.to_string_lossy().as_ref()])
+            .output()?;
+        anyhow::ensure!(out.status.success(), "venv 创建失败: {}",
+            String::from_utf8_lossy(&out.stderr));
+        let mut log = format!("venv 创建于 {}\n", env_dir.display());
+
+        // SDK 运行时依赖（worker 必需，与插件自身依赖无关）
+        {
+            let pip = env_dir.join("Scripts").join("pip.exe");
+            let out = std::process::Command::new(&pip)
+                .args(["install", "--disable-pip-version-check", "grpcio", "protobuf"])
+                .output()?;
+            anyhow::ensure!(out.status.success(), "SDK 依赖安装失败: {}{}",
+                String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+            log.push_str("sdk deps (grpcio, protobuf) installed\n");
+        }
+
+        // requirements（相对插件目录）
+        if !req_file.is_empty() {
+            let plugin_dir = { self.plugins.read().get(id).unwrap().dir.clone() };
+            let req = plugin_dir.join(&req_file);
+            if req.exists() {
+                let pip = env_dir.join("Scripts").join("pip.exe");
+                let out = std::process::Command::new(pip)
+                    .args(["install", "-r", req.to_string_lossy().as_ref()])
+                    .output()?;
+                log.push_str(&format!("pip install: {}\n{}",
+                    out.status, String::from_utf8_lossy(&out.stdout)));
+            }
+        }
+        Ok((t0.elapsed().as_millis() as u64, log))
+    }
+
+    pub fn env_exists(&self, id: &str) -> bool {
+        let env_dir = self.paths.plugin_envs().join(id.replace(['.', '/'], "_"));
+        env_dir.join("Scripts").join("python.exe").exists()
+    }
+
     /// 插件私有数据目录。
     fn data_dir(&self, id: &str) -> PathBuf {
         self.paths.plugins().join(id.replace(['.', '/'], "_")).join("_data")
@@ -227,6 +285,34 @@ impl PluginManager {
         // 崩溃监控 + 心跳
         self.spawn_monitors(id, Some(bridge), restarts, logs, port);
         Ok(())
+    }
+
+    /// 向运行中的插件发送节点实例配置（管线启动前必须，含 __node_type__ 路由键）。
+    pub fn configure_node(&self, id: &str, node_type: &str, instance_id: &str, params_json: &str)
+        -> anyhow::Result<()> {
+        let port = {
+            let map = self.plugins.read();
+            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let w = e.worker.read();
+            w.as_ref().map(|w| w.port)
+                .ok_or_else(|| anyhow::anyhow!("插件未运行: {id}"))?
+        };
+        self.runtime.block_on(async {
+            let ch = tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
+                .map_err(|e| anyhow::anyhow!("{e}"))?
+                .connect_timeout(Duration::from_secs(5))
+                .connect()
+                .await
+                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            let mut client = VoicePluginClient::new(ch);
+            client.configure(ConfigRequest {
+                node_type: node_type.into(),
+                instance_id: instance_id.into(),
+                params_json: params_json.into(),
+            }).await
+                .map_err(|e| anyhow::anyhow!("configure rpc: {e}"))
+                .map(|_| ())
+        })
     }
 
     fn handshake(&self, id: &str, port: u16)
