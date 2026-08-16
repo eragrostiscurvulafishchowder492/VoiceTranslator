@@ -1,4 +1,4 @@
-# test.ps1 — 全部测试：Rust 单元/集成 + Python SDK 回环 + 可选长稳
+﻿# test.ps1 — 全部测试：Rust 单元/集成 + Python SDK 回环 + 可选长稳
 param([switch]$Soak, [switch]$SkipAi)
 
 $Root = Split-Path -Parent $PSScriptRoot

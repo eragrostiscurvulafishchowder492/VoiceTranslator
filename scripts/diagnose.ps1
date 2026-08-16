@@ -1,4 +1,4 @@
-# diagnose.ps1 — 环境诊断（生成 logs/diagnose_json.txt）
+﻿# diagnose.ps1 — 环境诊断（生成 logs/diagnose_json.txt）
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 $env:PYTHONPATH = "$Root\sdk\python"

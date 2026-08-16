@@ -1,4 +1,4 @@
-# capture_window.ps1 — 截取指定进程主窗口到 PNG
+﻿# capture_window.ps1 — 截取指定进程主窗口到 PNG
 # 用法: powershell -File capture_window.ps1 -ProcessName <exe 名> -Out <png 路径> -WaitSec <秒>
 param(
     [Parameter(Mandatory=$true)][string]$ProcessName,

@@ -1,4 +1,4 @@
-# create_plugin.ps1 — 插件模板生成
+﻿# create_plugin.ps1 — 插件模板生成
 # 用法：.\scripts\create_plugin.ps1 my-plugin -Type tts
 param(
     [Parameter(Mandatory=$true)][string]$Name,

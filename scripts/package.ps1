@@ -1,4 +1,4 @@
-# package.ps1 — 打包：NSIS 安装包 + Portable ZIP + SHA-256
+﻿# package.ps1 — 打包：NSIS 安装包 + Portable ZIP + SHA-256
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 if (Test-Path "D:\_toolchains\cargo\bin\cargo.exe") {

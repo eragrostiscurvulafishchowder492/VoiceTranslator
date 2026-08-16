@@ -1,4 +1,4 @@
-# make_sha256.ps1 — 生成 dist-package/SHA256SUMS.txt
+﻿# make_sha256.ps1 — 生成 dist-package/SHA256SUMS.txt
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 $out = "# SHA-256 校验（生成于 $(Get-Date -Format 'yyyy-MM-dd HH:mm')）`n"

@@ -1,4 +1,4 @@
-# scripts/setup.ps1 — Voice Studio 开发环境一键初始化
+﻿# scripts/setup.ps1 — Voice Studio 开发环境一键初始化
 # 自动完成：系统/GPU/驱动/Rust/Node/pnpm/Python 检测、前端依赖、Rust 构建、
 #           数据库初始化、内置插件安装、Smoke Test。
 # 不做的事（明确）：不自动安装音频驱动、不以管理员执行不透明操作。
