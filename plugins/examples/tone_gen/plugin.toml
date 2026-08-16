@@ -1,0 +1,11 @@
+id = "org.voicestudio.tonegen"
+name = "Test Tone Generator"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "示例插件：测试正弦音发生器（独立 venv 演示，仅标准库）"
+license = "MIT"
+
+[runtime_requirements]
+python_env = "isolated"

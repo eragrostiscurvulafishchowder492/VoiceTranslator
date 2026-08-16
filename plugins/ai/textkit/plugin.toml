@@ -1,0 +1,10 @@
+id = "org.voicestudio.textkit"
+name = "中文文本工具"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "稳定前缀 / 智能断句 / 文本标准化 / text→tts.request 转换"
+
+[runtime_requirements]
+python_env = "main"

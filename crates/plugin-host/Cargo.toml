@@ -1,0 +1,32 @@
+[package]
+name = "voice-plugin-host"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+voice-common = { workspace = true }
+voice-plugin-protocol = { workspace = true }
+voice-pipeline-core = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+crossbeam-channel = { workspace = true }
+uuid = { workspace = true }
+chrono = { workspace = true }
+zip = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+bytemuck = "1"
+tokio-stream = "0.1"
+
+[dev-dependencies]
+tempfile = "3"
+serial_test = "3"
+crossbeam-channel = { workspace = true }
+voice-plugin-protocol = { workspace = true }

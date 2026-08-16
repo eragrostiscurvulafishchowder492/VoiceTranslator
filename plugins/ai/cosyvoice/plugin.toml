@@ -1,0 +1,23 @@
+id = "org.voicestudio.cosyvoice"
+name = "CosyVoice3 零样本 TTS"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "CosyVoice3-0.5B zero-shot 流式 TTS（用户参考音色，本地推理）"
+license = "Apache-2.0 (模型遵循官方许可)"
+
+permissions = ["gpu", "filesystem_read"]
+
+[[models]]
+model_id = "cosyvoice3-0.5b"
+display_name = "CosyVoice3-0.5B"
+local_path = "models/CosyVoice3-0.5B"
+size_bytes = 3200000000
+license = "Apache-2.0"
+estimated_vram_mb = 4200
+file_glob = "llm.pt"
+
+[runtime_requirements]
+python_env = "main"
+extra_python_path = ["deps/CosyVoice", "deps/CosyVoice/third_party/Matcha-TTS"]

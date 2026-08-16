@@ -1,0 +1,22 @@
+id = "org.voicestudio.funasr"
+name = "FunASR 中文流式识别"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "FunASR paraformer-zh-streaming 流式中文 ASR + silero-vad"
+license = "MIT (模型遵循各自许可)"
+
+permissions = ["gpu"]
+
+[[models]]
+model_id = "paraformer-streaming"
+display_name = "Paraformer-zh Streaming"
+local_path = "models/paraformer-streaming"
+license = "ModelScope license"
+estimated_vram_mb = 900
+file_glob = "model.pt"
+
+[runtime_requirements]
+python_env = "main"
+extra_python_path = ["deps/CosyVoice/third_party/Matcha-TTS"]

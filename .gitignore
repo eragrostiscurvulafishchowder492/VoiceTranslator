@@ -1,0 +1,29 @@
+# Rust
+target/
+
+# Node
+node_modules/
+apps/desktop/dist/
+
+# 运行数据（用户本地，不入库）
+app-data/
+logs/*.log
+logs/*.wav
+logs/*.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# 模型与依赖（大文件，D 盘本地管理）
+models/
+deps/
+data/references/
+
+# 打包产物
+dist-package/
+
+# IDE
+.idea/
+.vscode/

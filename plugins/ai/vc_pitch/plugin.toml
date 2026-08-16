@@ -1,0 +1,12 @@
+id = "org.voicestudio.vcpitch"
+name = "实时变声（音高/共振峰）"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "实时声音转换：音高移动 + 共振峰偏移（真实 DSP 算法，CPU 实时）。RVC/Seed-VC 适配接口见 README"
+
+permissions = ["gpu"]
+
+[runtime_requirements]
+python_env = "main"

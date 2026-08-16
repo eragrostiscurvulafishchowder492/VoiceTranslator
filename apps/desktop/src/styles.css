@@ -1,0 +1,52 @@
+:root {
+  --bg: #101014;
+  --panel: #17171d;
+  --panel2: #1d1d25;
+  --border: #2a2a35;
+  --text: #e4e4ec;
+  --muted: #8b8b9e;
+  --accent: #5ac8fa;
+  --accent2: #64fab4;
+  --danger: #fa6480;
+  --warn: #fac464;
+  font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+  font-size: 14px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); overflow: hidden; }
+button {
+  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: #1c4a63; border-color: #2f7ba3; }
+button.danger { background: #5c2432; border-color: #8f3a4e; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+input, select, textarea {
+  background: #121218; color: var(--text); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 8px; font-size: 13px; width: 100%;
+}
+input[type="range"] { padding: 0; }
+.card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 12px;
+}
+.card h3 { font-size: 14px; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+.row { display: flex; gap: 10px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+.col { display: flex; flex-direction: column; gap: 6px; }
+.muted { color: var(--muted); font-size: 12px; }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px;
+  background: var(--panel2); border: 1px solid var(--border); color: var(--muted);
+}
+.tag.ok { color: var(--accent2); border-color: #2c6e52; }
+.tag.err { color: var(--danger); border-color: #6e2c3a; }
+.tag.warn { color: var(--warn); border-color: #6e5c2c; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 500; }
+.page { overflow-y: auto; height: 100%; padding: 16px 20px; }
+.page h2 { font-size: 17px; margin-bottom: 14px; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #2e2e3a; border-radius: 5px; }
+::-webkit-scrollbar-track { background: transparent; }

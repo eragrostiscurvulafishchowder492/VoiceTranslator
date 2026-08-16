@@ -1,0 +1,15 @@
+[package]
+name = "voice-resource-manager"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+voice-common = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+sysinfo = { workspace = true }
+nvml-wrapper = { workspace = true }
+parking_lot = { workspace = true }
+chrono = { workspace = true }

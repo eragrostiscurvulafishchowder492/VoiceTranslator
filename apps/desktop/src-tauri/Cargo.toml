@@ -1,0 +1,39 @@
+[package]
+name = "voice-studio-desktop"
+version = "0.1.0"
+description = "Voice Studio — 可插拔实时语音工作台"
+edition = "2021"
+license = "MIT"
+
+[lib]
+name = "voice_studio_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+voice-common = { path = "../../../crates/common" }
+voice-plugin-protocol = { path = "../../../crates/plugin-protocol" }
+voice-audio-engine = { path = "../../../crates/audio-engine" }
+voice-pipeline-core = { path = "../../../crates/pipeline-core" }
+voice-plugin-host = { path = "../../../crates/plugin-host" }
+voice-resource-manager = { path = "../../../crates/resource-manager" }
+voice-persistence = { path = "../../../crates/persistence" }
+voice-diagnostics = { path = "../../../crates/diagnostics" }
+
+tauri = { version = "2", features = [] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-dialog = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+parking_lot = { workspace = true }
+crossbeam-channel = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+
+[features]
+# 此特性用于 cargo test 避免需要 GUI 环境
+test-headless = []

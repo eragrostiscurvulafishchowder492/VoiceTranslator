@@ -1,0 +1,174 @@
+// Voice Studio 插件协议 v1
+// 控制面：gRPC（本文件由宿主 Rust 与 Python SDK 共同生成代码）
+syntax = "proto3";
+package voice_plugin.v1;
+
+// ---------- 基础 ----------
+message Empty {}
+
+message HandshakeRequest {
+  string host_protocol_version = 1;   // 例 "1.0"
+  string host_app_version = 2;
+  repeated string supported_features = 3;       // stream_audio, stream_text, tts, interrupt...
+  repeated string supported_audio_formats = 4;  // "pcm_f32le@48000:1" ...
+  string plugin_dir = 5;              // 插件安装目录（绝对路径）
+  string data_dir = 6;                // 插件私有数据目录
+}
+
+message HandshakeResponse {
+  string plugin_protocol_version = 1; // 不兼容时宿主拒绝运行
+  string plugin_id = 2;
+  string plugin_version = 3;
+  repeated string supported_features = 4;
+  repeated string supported_audio_formats = 5;
+  repeated string supported_execution_providers = 6; // cuda, cpu, dml...
+  repeated NodeTypeDescriptor node_types = 7;
+  repeated ModelInfo models = 8;
+  bool ok = 9;
+  string error = 10;
+}
+
+message NodeTypeDescriptor {
+  string node_type = 1;              // 例 "funasr.streaming_asr"
+  string display_name = 2;
+  string category = 3;               // input/asr/tts/vc/effect/output/text/control
+  repeated PortDescriptor inputs = 4;
+  repeated PortDescriptor outputs = 5;
+  string params_schema_json = 6;     // JSON Schema，宿主自动生成参数 UI
+  string default_params_json = 7;
+  int32 estimated_vram_mb = 8;
+}
+
+message PortDescriptor {
+  string name = 1;
+  string port_type = 2;              // audio.pcm / text.partial / ...
+  bool required = 3;
+  string sample_format = 4;          // pcm 端口：f32le
+  uint32 sample_rate = 5;            // 0 = 任意
+  uint32 channels = 6;               // 0 = 任意
+}
+
+message ModelInfo {
+  string model_id = 1;
+  string display_name = 2;
+  string local_path = 3;             // 空表示未下载
+  uint64 size_bytes = 4;
+  string license = 5;
+  int32 estimated_vram_mb = 6;
+  string download_url = 7;           // 空表示手动导入
+  string sha256 = 8;
+  string file_glob = 9;              // 校验/导入时匹配的文件模式
+}
+
+// ---------- 生命周期 ----------
+message ConfigRequest {
+  string node_type = 1;
+  string instance_id = 2;
+  string params_json = 3;
+}
+
+message LoadModelRequest {
+  string node_type = 1;
+  string instance_id = 2;
+  string model_id = 3;
+  string model_path = 4;
+}
+
+message LoadModelResponse { bool ok = 1; string error = 2; int32 load_ms = 3; int32 vram_mb = 4; }
+
+message InterruptRequest { string instance_id = 1; }
+message InterruptResponse { bool ok = 1; }
+
+message HealthResponse {
+  string status = 1;                 // ok / degraded / error
+  int64 uptime_ms = 2;
+  float cpu_percent = 3;
+  uint64 rss_bytes = 4;
+  uint64 vram_bytes = 5;
+  string detail = 6;
+}
+
+message MetricsSample {
+  string node_type = 1;
+  string instance_id = 2;
+  string metric = 3;                 // ttfa_ms / rtf / latency_ms ...
+  float value = 4;
+  int64 timestamp_ns = 5;
+}
+
+// ---------- 数据面（双向流） ----------
+message AudioFrame {
+  string stream_id = 1;
+  uint64 sequence = 2;
+  int64 timestamp_ns = 3;
+  uint32 sample_rate = 4;
+  uint32 channels = 5;
+  string sample_format = 6;          // f32le
+  uint32 frame_count = 7;
+  bytes payload = 8;
+  bool end_of_stream = 9;
+  bool end_of_utterance = 10;
+  string target_instance = 11;       // 多节点 worker 内路由
+}
+
+message TextEvent {
+  string stream_id = 1;
+  string segment_id = 2;
+  uint64 sequence = 3;
+  string text = 4;
+  string language = 5;
+  bool is_partial = 6;
+  bool is_final = 7;
+  float stability = 8;
+  double start_time = 9;
+  double end_time = 10;
+  float confidence = 11;
+  string target_instance = 12;
+}
+
+message TtsRequest {
+  string request_id = 1;
+  string text = 2;
+  string language = 3;
+  string voice_profile = 4;
+  string style = 5;
+  float speed = 6;
+  float pitch = 7;
+  float energy = 8;
+  int32 priority = 9;
+  string interrupt_mode = 10;        // QUEUE / INTERRUPT / REPLACE_PENDING / DROP_IF_BUSY
+  string target_instance = 11;
+}
+
+message ControlSignal {
+  string signal = 1;                 // vad_start / vad_end / ptt_down / ptt_up / flush / eos
+  string payload_json = 2;
+  string target_instance = 3;
+}
+
+message PluginMessage {
+  string protocol_version = 1;
+  uint32 schema_version = 2;
+  string source_node = 3;
+  string source_port = 4;
+  string target_node = 5;
+  string target_port = 6;
+  oneof body {
+    AudioFrame audio = 10;
+    TextEvent text = 11;
+    TtsRequest tts = 12;
+    ControlSignal control = 13;
+    MetricsSample metric = 14;
+  }
+}
+
+// ---------- 服务定义 ----------
+service VoicePlugin {
+  rpc Handshake(HandshakeRequest) returns (HandshakeResponse);
+  rpc Configure(ConfigRequest) returns (Empty);
+  rpc LoadModel(LoadModelRequest) returns (LoadModelResponse);
+  rpc Interrupt(InterruptRequest) returns (InterruptResponse);
+  rpc Health(Empty) returns (HealthResponse);
+  rpc Shutdown(Empty) returns (Empty);
+  rpc Process(stream PluginMessage) returns (stream PluginMessage);
+}

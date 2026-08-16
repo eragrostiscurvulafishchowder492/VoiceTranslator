@@ -1,0 +1,15 @@
+[package]
+name = "voice-audio-engine"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+voice-common = { workspace = true }
+cpal = { workspace = true }
+rubato = { workspace = true }
+hound = "3"
+parking_lot = { workspace = true }
+crossbeam-channel = { workspace = true }
+anyhow = { workspace = true }
+log = { workspace = true }
+serde = { workspace = true }

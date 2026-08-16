@@ -1,0 +1,11 @@
+id = "org.voicestudio.textreplace"
+name = "Text Replace"
+version = "1.0.0"
+api_version = "1.0"
+runtime = "python"
+entrypoint = "plugin_impl:create_plugin"
+description = "示例插件：正则/词典文本替换节点"
+license = "MIT"
+
+[runtime_requirements]
+python_env = "main"

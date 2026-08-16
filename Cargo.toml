@@ -1,0 +1,54 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/plugin-protocol",
+    "crates/audio-engine",
+    "crates/pipeline-core",
+    "crates/plugin-host",
+    "crates/resource-manager",
+    "crates/persistence",
+    "crates/diagnostics",
+    "apps/desktop/src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+voice-common = { path = "crates/common" }
+voice-plugin-protocol = { path = "crates/plugin-protocol" }
+voice-audio-engine = { path = "crates/audio-engine" }
+voice-pipeline-core = { path = "crates/pipeline-core" }
+voice-plugin-host = { path = "crates/plugin-host" }
+voice-resource-manager = { path = "crates/resource-manager" }
+voice-persistence = { path = "crates/persistence" }
+voice-diagnostics = { path = "crates/diagnostics" }
+
+tokio = { version = "1", features = ["full"] }
+tonic = "0.13"
+prost = "0.13"
+protox = "0.8"
+tonic-build = "0.13"
+cpal = "0.15"
+rubato = "0.15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+rusqlite = { version = "0.32", features = ["bundled"] }
+anyhow = "1"
+thiserror = "2"
+log = "0.4"
+env_logger = "0.11"
+parking_lot = "0.12"
+crossbeam-channel = "0.5"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+sysinfo = "0.32"
+nvml-wrapper = "0.10"
+zip = "2"
+sha2 = "0.10"
+hex = "0.4"
+rand = "0.8"

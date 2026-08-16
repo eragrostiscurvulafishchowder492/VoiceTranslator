@@ -1,0 +1,39 @@
+// Tauri invoke 封装（类型宽松：宿主返回 JSON）
+import { invoke } from "@tauri-apps/api/core";
+
+export const api = {
+  appInit: () => invoke<any>("app_init"),
+  markCleanExit: () => invoke("mark_clean_exit"),
+  listDevices: () => invoke<any[]>("list_devices"),
+  resourceSnapshot: () => invoke<any>("resource_snapshot"),
+  nodeRegistry: () => invoke<any[]>("node_registry"),
+  listPipelines: () => invoke<any[]>("list_pipelines"),
+  savePipeline: (graphJson: string, name: string, isDefault: boolean) =>
+    invoke<string>("save_pipeline", { graphJson, name, isDefault }),
+  deletePipeline: (id: string) => invoke("delete_pipeline", { id }),
+  validatePipeline: (graphJson: string) => invoke<any[]>("validate_pipeline", { graphJson }),
+  startPipeline: (graphJson: string) => invoke<any>("start_pipeline", { graphJson }),
+  stopPipeline: () => invoke("stop_pipeline"),
+  pipelineSnapshot: () => invoke<any>("pipeline_snapshot"),
+  pipelineControl: (signal: string) => invoke("pipeline_control", { signal }),
+  pluginList: () => invoke<any[]>("plugin_list"),
+  pluginStart: (id: string) => invoke("plugin_start", { id }),
+  pluginStop: (id: string) => invoke("plugin_stop", { id }),
+  pluginEnable: (id: string, enabled: boolean) => invoke("plugin_enable", { id, enabled }),
+  pluginInstall: (zipPath: string) => invoke<string>("plugin_install", { zipPath }),
+  pluginUninstall: (id: string) => invoke("plugin_uninstall", { id }),
+  pluginLogs: (id: string, lastN?: number) => invoke<string[]>("plugin_logs", { id, lastN }),
+  logsRecent: (lastN?: number) => invoke<any[]>("logs_recent", { lastN }),
+  modelList: () => invoke<any[]>("model_list"),
+  modelUpsert: (m: any) => invoke("model_upsert", { m }),
+  modelDelete: (modelId: string) => invoke("model_delete", { modelId }),
+  referenceList: () => invoke<any[]>("reference_list"),
+  referenceSave: (p: any) => invoke("reference_save", { p }),
+  referenceDelete: (id: string) => invoke("reference_delete", { id }),
+  settingsGet: () => invoke<any>("settings_get"),
+  settingsSet: (settings: any) => invoke("settings_set", { settings }),
+  testTts: (text: string, pluginId: string, instanceId: string) =>
+    invoke<any>("test_tts", { text, pluginId, instanceId }),
+  recoveryUseLastKnown: () => invoke<string | null>("recovery_use_last_known"),
+  recoverySafeMode: () => invoke("recovery_safe_mode"),
+};

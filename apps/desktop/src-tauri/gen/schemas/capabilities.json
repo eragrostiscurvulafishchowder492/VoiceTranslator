@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Voice Studio 主窗口默认能力","local":true,"windows":["main"],"permissions":["core:default","core:window:default","core:event:default","global-shortcut:allow-register","global-shortcut:allow-unregister","global-shortcut:allow-is-registered","dialog:allow-open","dialog:allow-save"]}}

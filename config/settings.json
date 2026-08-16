@@ -1,0 +1,53 @@
+{
+  "mic_device": "",
+  "virtual_output": "",
+  "monitor_output": "",
+  "output_sample_rate": 48000,
+  "input_block_ms": 20,
+  "input_gain_db": 0.0,
+  "monitor_enabled": false,
+  "monitor_gain_db": -6.0,
+  "asr_engine": "funasr",
+  "tts_engine": "cosyvoice",
+  "tts_model_dir": "",
+  "vram_mode": "balanced",
+  "asr_device": "cuda",
+  "tts_device": "cuda",
+  "reference_profile": "",
+  "listen_mode": "ptt",
+  "hotkeys": {
+    "ptt": "F8",
+    "mute": "F9",
+    "clear_queue": "F10",
+    "interrupt": "F11"
+  },
+  "vad_threshold": 0.5,
+  "vad_min_speech_ms": 180,
+  "vad_silence_end_ms": 700,
+  "vad_pre_speech_ms": 250,
+  "stable_rounds": 4,
+  "max_segment_chars": 26,
+  "flush_timeout_ms": 1500,
+  "punctuation_pause": {
+    "comma": 0.15,
+    "sentence": 0.35,
+    "question": 0.4,
+    "ellipsis": 0.6,
+    "between": 0.5
+  },
+  "speaking_speed": 0.95,
+  "emotion": "calm",
+  "energy": 0.5,
+  "pitch": 0.5,
+  "breathiness": 0.0,
+  "text_mode": "gaming",
+  "asr_hotwords": "",
+  "asr_chunk_size": [
+    0,
+    10,
+    5
+  ],
+  "asr_punc_model": false,
+  "tts_stream_chunk": 4,
+  "tts_max_retries": 1
+}
