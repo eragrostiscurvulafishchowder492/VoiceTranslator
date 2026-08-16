@@ -5292,6 +5292,7 @@ dependencies = [
  "anyhow",
  "chrono",
  "crossbeam-channel",
+ "env_logger",
  "log",
  "parking_lot",
  "serde",

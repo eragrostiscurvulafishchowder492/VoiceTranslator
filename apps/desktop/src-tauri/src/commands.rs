@@ -125,11 +125,15 @@ pub fn start_pipeline(app: App, graph_json: String) -> Result<serde_json::Value,
         return Err("管线已在运行".into());
     }
     let g: PipelineGraph = serde_json::from_str(&graph_json).map_err(|e| format!("图格式错误: {e}"))?;
+    start_pipeline_impl(&app, g)
+}
 
+/// start_pipeline 的核心实现（与 GUI 命令完全同路径，测试/工具直接调用）。
+pub fn start_pipeline_impl(app: &AppState, g: PipelineGraph) -> Result<serde_json::Value, String> {
     // 1) 自动启动图中引用的插件 worker
     let needed: Vec<String> = g.nodes.iter()
+        .filter(|n| n.node_type.contains('/'))
         .filter_map(|n| n.node_type.split('/').next().map(|s| s.to_string()))
-        .filter(|id| id.contains('.'))
         .collect();
     for pid in &needed {
         let st = app.plugins.list_status().into_iter().find(|s| &s.id == pid);
@@ -149,7 +153,7 @@ pub fn start_pipeline(app: App, graph_json: String) -> Result<serde_json::Value,
     // 2) 校验（Error 级阻断）
     {
         let reg = app.registry.read();
-        let issues = validate(&g, &reg, &ext_checks(&app));
+        let issues = validate(&g, &reg, &ext_checks(app));
         let errs: Vec<&str> = issues.iter()
             .filter(|i| i.level == voice_pipeline_core::validate::Severity::Error)
             .map(|i| i.message.as_str()).collect();
@@ -212,7 +216,8 @@ pub fn start_pipeline(app: App, graph_json: String) -> Result<serde_json::Value,
         }
     }
     for n in &g.nodes {
-        if let Some(pid) = n.node_type.split('/').next().filter(|s| s.contains('.')) {
+        if n.node_type.contains('/') {
+            let pid = n.node_type.split('/').next().unwrap_or("");
             let short = n.node_type.split_once('/').map(|(_, t)| t).unwrap_or("");
             let params = serde_json::to_string(&n.params).unwrap_or_else(|_| "{}".into());
             if let Err(e) = app.plugins.configure_node(pid, short, &n.id, &params) {
@@ -232,6 +237,12 @@ pub fn start_pipeline(app: App, graph_json: String) -> Result<serde_json::Value,
 
 #[tauri::command]
 pub fn stop_pipeline(app: App) -> Result<(), String> {
+    stop_pipeline_impl(&app);
+    Ok(())
+}
+
+/// stop_pipeline 核心实现（测试/工具共用）。
+pub fn stop_pipeline_impl(app: &AppState) {
     {
         let mut g = app.engine.lock();
         if let Some(e) = g.as_mut() { e.stop(); }
@@ -248,7 +259,6 @@ pub fn stop_pipeline(app: App) -> Result<(), String> {
         *p = None;
     }
     app.logring.push("INFO", "pipeline", "管线已停止");
-    Ok(())
 }
 
 #[tauri::command]

@@ -103,6 +103,7 @@ pub struct ExecutionEngine {
     running_flag: Arc<AtomicBool>,
     total_in: Arc<AtomicU64>,
     total_dropped: Arc<AtomicU64>,
+    edge_senders: Vec<Arc<EdgeSender>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -130,6 +131,7 @@ impl ExecutionEngine {
             running_flag: Arc::new(AtomicBool::new(false)),
             total_in: Arc::new(AtomicU64::new(0)),
             total_dropped: Arc::new(AtomicU64::new(0)),
+            edge_senders: Vec::new(),
         }
     }
 
@@ -152,6 +154,17 @@ impl ExecutionEngine {
     }
 
     pub fn snapshot(&self) -> serde_json::Value {
+        // 边统计实时刷新（sent/dropped 为原子计数，queue_depth 取通道长度）
+        {
+            let mut stats = self.edge_stats.lock();
+            for es in &self.edge_senders {
+                if let Some(s) = stats.get_mut(&es.edge_id) {
+                    s.queue_depth = es.tx.len();
+                    s.sent = es.sent.load(Ordering::Relaxed);
+                    s.dropped = es.dropped.load(Ordering::Relaxed);
+                }
+            }
+        }
         let edges: Vec<EdgeStatSnapshot> = self.edge_stats.lock().values().cloned().collect();
         let nodes: HashMap<String, NodeState> = self.node_states.read().clone();
         serde_json::json!({
@@ -181,6 +194,7 @@ impl ExecutionEngine {
 
         // 每条边一个发送端（策略在此生效）
         let mut out_edges: HashMap<String, Vec<Arc<EdgeSender>>> = HashMap::new();
+        let mut all_senders: Vec<Arc<EdgeSender>> = Vec::new();
         {
             let mut stats = self.edge_stats.lock();
             for e in &self.graph.edges {
@@ -199,9 +213,11 @@ impl ExecutionEngine {
                     edge: format!("{}:{} → {}:{}", e.from_node, e.from_port, e.to_node, e.to_port),
                     queue_depth: 0, sent: 0, dropped: 0,
                 });
-                out_edges.entry(e.from_node.clone()).or_default().push(es);
+                out_edges.entry(e.from_node.clone()).or_default().push(es.clone());
+                all_senders.push(es);
             }
         }
+        self.edge_senders = all_senders;
 
         // 插件桥回注路由：worker 输出按 (node, port) 送到边
         let route_outgoing = {
@@ -424,6 +440,9 @@ fn produce_source(p: &mut NativeProcessor, node: &NodeInstance, outs: &[Arc<Edge
             true
         }
         NativeProcessor::FileSource { samples, pos, loop_, rate: _, seq } => {
+            if *pos == usize::MAX {
+                return false; // 已发送过 EOS
+            }
             if *pos >= samples.len() {
                 if !*loop_ {
                     fanout(outs, "out", Msg {
@@ -437,6 +456,7 @@ fn produce_source(p: &mut NativeProcessor, node: &NodeInstance, outs: &[Arc<Edge
                             end_of_stream: true, end_of_utterance: true,
                         }),
                     });
+                    *pos = usize::MAX; // 只发一次
                     return false;
                 }
                 *pos = 0;
@@ -521,7 +541,8 @@ fn handle_msg(proc: &mut Option<NativeProcessor>, node: &NodeInstance, _spec: &N
                 if a.end_of_stream {
                     out.extend(rs.flush().unwrap_or_default());
                 }
-                if !out.is_empty() {
+                // EOS 标记必须转发（即使 flush 无新样本），下游依赖它触发 finalize
+                if !out.is_empty() || a.end_of_stream || a.end_of_utterance {
                     *seq += 1;
                     fanout(outs, "out", Msg { from_node: node.id.clone(), from_port: "out".into(),
                         ts_ns: ts(), payload: Payload::Audio(AudioChunk {

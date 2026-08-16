@@ -40,3 +40,4 @@ test-headless = []
 
 [dev-dependencies]
 serial_test = "3"
+env_logger = { workspace = true }

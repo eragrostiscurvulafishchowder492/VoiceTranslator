@@ -119,6 +119,10 @@ class Servicer(pb_grpc.VoicePluginServicer):
     # ---------- 输出发射 ----------
     async def _emit(self, instance_id: str, item) -> None:
         msg = self._wrap(instance_id, item)
+        if os.environ.get("VOICE_SDK_TRACE"):
+            kind = type(item).__name__
+            detail = getattr(item, "text", "")[:20] if hasattr(item, "text") else ""
+            print(f"[sdk-trace] emit {kind} -> {instance_id} queues={len(self.out_queues)} {detail}", flush=True)
         for q in list(self.out_queues):
             await q.put(msg)
 

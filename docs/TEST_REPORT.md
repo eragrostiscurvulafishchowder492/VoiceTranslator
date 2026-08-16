@@ -6,14 +6,36 @@
 
 ## 0. 发布前新增验证（本轮补齐）
 
+### 0.1 手测自动化（用户验收清单的无耳版本，4/4 通过）
+
+`cargo run -p voice-studio-desktop --example manual_test`（logs/manual_test_full.log）
+——全部走 GUI start_pipeline 的**生产同路径**（start_pipeline_impl）：
+
+| # | 用户清单对应 | 结果 |
+|---|---|---|
+| T1 变声管线 | 直接实时变声 | PASS：ZCR 0.060→0.089（升调），时长比 1.00（WSOLA+重采样正确） |
+| T2 ASR 管线 | 中文 ASR 字幕 | PASS：真实语音→"你们先过去我拿一下东西马上回来"，相似度 0.91，partial 增量流完整 |
+| T3 完整核心管线 | 中文语音转目标音色 | PASS：真实语音→ASR→稳定前缀断句→标准化→**CosyVoice 真实合成**→限幅→录制 3.56s WAV（RMS 0.068 / 峰值 0.533） |
+| T4 原声监听 | 原声监听 | PASS：麦克风 584 帧流经管线，underrun=0 |
+
+### 0.2 本轮发现并修复的产品 bug（全部由手测自动化暴露）
+
+| bug | 影响 | 修复 |
+|---|---|---|
+| start_pipeline 插件判定用 `contains('.')` | **任何含内置节点的管线启动即失败**（"插件未安装: audio.file"） | 判据改 `contains('/')` |
+| audio.ressembler 吞 EOS | 重采样节点 flush 无输出时不转发 end_of_stream，**下游 ASR 永远不 finalize** | EOS 标记必转发 |
+| vc_pitch 音高算法不完整 | 只做时间压缩未重采样回原长，**变声输出缩短 25%**（磁带加速效应） | 重采样×r + WSOLA 拉回原时长 |
+| 引擎边统计从不刷新 | GUI 性能页 sent/queue 恒 0 | snapshot 时从原子计数刷新 |
+| 文件节点 EOS 重复发送 | 每 tick 重发 EOS（无害但脏日志/多余 finalize） | 发送一次后置哨兵 |
+
+### 0.3 其他新增验证
+
 | 项 | 结果 | 证据 |
 |---|---|---|
 | **实机麦克风采集** | PASS：HECATE G2 默认输入，3s 采集 131712 帧，RMS 0.0066 / peak 0.2544（检测到环境声），44.1kHz 自动处理，**溢出=0** | `cargo run -p voice-audio-engine --example mic_probe` |
 | **GUI 十页视觉验证** | PASS：`--page=<id>` 深链接逐页截图（logs/screenshots/*.png），节点编辑器带预置管线 9 节点+连线完整渲染 | 10 张截图 |
 | **桌面命令层 E2E** | PASS：text.manual_input → textkit.to_tts（真实 worker）经 **插件自动启动→Configure 下发→桥接→引擎调度** 产出正确 tts.request（3.9s） | logs/desktop_e2e.log |
-| **Configure 缺失 bug 修复** | 发现并修复：start_pipeline 原先不下发节点参数（含 `__node_type__` 路由键），插件节点全部失效 | 同上测试覆盖 |
 | **隔离 venv 闭环** | PASS：tonegen 声明 isolated，自动创建 venv + SDK 依赖 + 握手 + 节点缓存（17.2s） | registry 15→25 节点 |
-| **节点类型缓存** | 插件未运行时编辑器也能加载/校验预置管线（Warning 提示"启动时自动启动"，不再阻断） | studio2.png |
 
 ## 1. Rust 单元 + 集成测试（21 通过 / 0 失败）
 

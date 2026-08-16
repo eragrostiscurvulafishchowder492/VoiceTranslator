@@ -75,9 +75,13 @@ docs/ARCHITECTURE.md 第 2 节（每个 crate 有明确"禁止"清单）。
 - Rust 21/21 通过（含**宿主⇄真实 worker 生命周期**：崩溃强杀后宿主存活；
   **宿主命令层原生管线 E2E**：WAV→+6dB→录制数值验证；
   **桌面命令层插件 E2E**：自动启动/Configure/桥接/调度全链路）。
+- **手测自动化 4/4 通过**（`--example manual_test`，生产同路径）：
+  变声（升调+时长保持）/ ASR（相似度 0.91）/ **完整核心管线**（真实语音→
+  ASR→断句→标准化→CosyVoice 合成→3.56s WAV）/ 原声监听（underrun=0）。
 - 实机麦克风采集验证通过（零溢出）；GUI 十页截图视觉验证通过。
-- 发布前修复的关键 bug：start_pipeline 未下发 Configure（插件节点参数与
-  路由键丢失，全部插件节点失效）。
+- 发布前修复的关键 bug（均由手测自动化暴露）：start_pipeline 插件误判
+  （内置节点管线无法启动）、resampler 吞 EOS（ASR 无 final）、vc_pitch
+  时长缩短 25%、边统计不刷新、Configure 未下发。
 - SDK 回环：握手/配置/数据面/健康/优雅退出全链路 + 数值精确验证。
 - AI 管线冒烟：真实 TTS 音频 + 正确断句（gRPC 插件路径）。
 - 30 分钟 soak：0.29% 错误率、VRAM 零增长、无耗时漂移。

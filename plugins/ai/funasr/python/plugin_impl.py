@@ -64,6 +64,8 @@ class FunASRPlugin(VoicePlugin):
         self._asr_engine = None
         self._asr_buf = np.zeros(0, dtype=np.float32)
         self._asr_seq = 0
+        self._last_partial = ""
+        self._recv_frames = 0
         self._vad = None
         self.in_speech = False
         self._device = "cpu"
@@ -111,11 +113,15 @@ class FunASRPlugin(VoicePlugin):
 
     # ---------- ASR（线程池，阻塞推理不卡 gRPC 循环） ----------
     def _asr_step(self, instance_id, frame: AudioFrame, ctx: PluginContext):
+        self._recv_frames = getattr(self, "_recv_frames", 0) + 1
+        if self._recv_frames % 10 == 1:
+            print(f"[funasr] recv #{self._recv_frames} frames, eos={frame.end_of_stream}", flush=True)
         if self._asr_engine is None:
             try:
                 from app.asr.funasr import FunASREngine
                 self._asr_engine = FunASREngine(device=self._device, chunk_size=[0, 10, 5])
                 self._asr_engine.start()
+                print(f"[funasr] engine ready after {self._recv_frames} frames", flush=True)
             except Exception as e:
                 print(f"[funasr] engine load failed: {e}", flush=True)
                 return
@@ -127,12 +133,16 @@ class FunASRPlugin(VoicePlugin):
             self._asr_buf = self._asr_buf[stride:]
             self._asr_engine.push_audio(chunk)
             partial = self._asr_engine.get_partial_text()
-            if partial:
+            if partial and partial != self._last_partial:
+                self._last_partial = partial
                 self._asr_seq += 1
+                print(f"[funasr] partial#{self._asr_seq}: {partial}", flush=True)
                 ctx.emit_threadsafe(ctx.emit_text(
                     instance_id, partial, is_partial=True, sequence=self._asr_seq))
         if frame.end_of_utterance or frame.end_of_stream:
+            print(f"[funasr] finalize on eos (recv={self._recv_frames})", flush=True)
             final = self._asr_engine.finalize_segment()
+            print(f"[funasr] final={final!r}", flush=True)
             if final:
                 self._asr_seq += 1
                 ctx.emit_threadsafe(ctx.emit_text(

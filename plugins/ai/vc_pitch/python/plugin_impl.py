@@ -45,28 +45,37 @@ PRESETS = {
 }
 
 
-def _pitch_shift_wsola(x: np.ndarray, rate: float, sr: int) -> np.ndarray:
-    """WSOLA：时间伸缩 + 重采样 = 音高移动，保持时长。"""
-    if len(x) < 2048:
+def _pitch_shift_wsola(x: np.ndarray, semitones: float, sr: int) -> np.ndarray:
+    """音高移动（时长保持）：先重采样改变音高，再 WSOLA 拉回原时长。"""
+    r = 2.0 ** (semitones / 12.0)
+    if len(x) < 2048 or abs(semitones) < 0.05:
         return x
+    # 1) 重采样：长度 ×1/r（更短、音高 ×r）
+    n_out = max(1, int(len(x) / r))
+    idx = np.linspace(0, len(x) - 1, n_out)
+    resampled = np.interp(idx, np.arange(len(x)), x).astype(np.float32)
+    # 2) WSOLA 拉伸回原长度（音高保持）
+    return _wsola_stretch(resampled, len(x), sr)
+
+
+def _wsola_stretch(x: np.ndarray, target_len: int, sr: int) -> np.ndarray:
+    """WSOLA 时间拉伸到 target_len（音高不变），Hann 交叉淡化。"""
     win = 1024 if sr >= 32000 else 512
     hop = win // 2
-    out_len = int(len(x) / rate)
-    # 1) 时间拉伸（重复/抽取块，交叉淡化）
-    stretched = np.zeros(out_len + win, dtype=np.float32)
-    norm = np.zeros(out_len + win, dtype=np.float32)
+    rate = len(x) / target_len          # >1 = 拉伸
+    out = np.zeros(target_len + win, dtype=np.float32)
+    norm = np.zeros(target_len + win, dtype=np.float32)
     env = np.hanning(win).astype(np.float32)
     pos_out = 0
     pos_in = 0.0
-    while pos_out < out_len and int(pos_in) + win < len(x):
+    while pos_out < target_len and int(pos_in) + win < len(x):
         i = int(pos_in)
-        stretched[pos_out:pos_out + win] += x[i:i + win] * env
+        out[pos_out:pos_out + win] += x[i:i + win] * env
         norm[pos_out:pos_out + win] += env
         pos_out += hop
         pos_in += hop * rate
     norm[norm < 1e-6] = 1.0
-    stretched = stretched / norm
-    return stretched[:out_len]
+    return (out / norm)[:target_len]
 
 
 class VcPitchPlugin(VoicePlugin):
@@ -99,8 +108,7 @@ class VcPitchPlugin(VoicePlugin):
         self.frames_in += len(x)
 
         if abs(semis) > 0.05:
-            rate = 2.0 ** (semis / 12.0)
-            x = _pitch_shift_wsola(x, rate, sr)
+            x = _pitch_shift_wsola(x, semis, sr)
 
         if abs(fshift - 1.0) > 0.01:
             # 共振峰偏移：频域缩放（帧级 STFT 近似，够用且实时）
