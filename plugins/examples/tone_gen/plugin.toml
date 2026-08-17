@@ -5,7 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "示例插件：测试正弦音发生器（独立 venv 演示，仅标准库）"
-license = "MIT"
+license = "Apache-2.0"
 
 [runtime_requirements]
 python_env = "isolated"

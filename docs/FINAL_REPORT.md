@@ -1,10 +1,11 @@
 # Voice Studio — 最终报告（FINAL REPORT）
 
-日期：2026-08-16
-环境：Windows 11 · RTX 4060 Laptop 8GB · Rust 1.97.1 · Node 24 · Python 3.12.9
+日期：2026-08-17
+历史运行环境：Windows 11 · RTX 4060 Laptop 8GB · Rust 1.97.1 · Node 24 · Python 3.12.9
 
-> 只记录真实运行得出的数据。所有数字在 logs/ 有原始记录，复现命令见第 9 节。
-> 未完成项与人工验收项在第 8 节明确列出，不做隐瞒。
+> F9 已通过当前本地源码门禁，精确命令、exit 与 PRE=POST 指纹见 `docs/TEST_REPORT.md`。
+> 第 2–5 节中的 AI、麦克风、GUI 与 soak 数据仍是较早环境的历史日志；源码公开就绪和
+> 二进制/模型发行必须分开判断。
 
 ---
 
@@ -12,17 +13,17 @@
 
 | 交付物 | 位置 | 状态 |
 |---|---|---|
-| Tauri 2 + Rust 宿主（8 crate） | `crates/` + `apps/desktop/src-tauri/` | ✅ 构建通过、启动冒烟通过 |
-| Vue 3 GUI（十页导航 + SVG 节点编辑器 + Schema 参数面板） | `apps/desktop/src/` | ✅ 构建通过 |
-| Protobuf + gRPC 插件协议 v1 | `proto/voice_plugin_v1.proto` | ✅ Rust/Python 双端生成并验证 |
-| Python Plugin SDK | `sdk/python/voice_plugin_sdk/` | ✅ 回环 E2E 通过 |
-| 示例插件 ×5 | `plugins/examples/` | ✅ 全部加载验证 |
-| 真实 AI 插件 ×4（ASR/TTS/文本工具/变声） | `plugins/ai/` | ✅ ASR/TTS/文本工具真实推理验证；VC 为真实 DSP 算法 |
-| 预置管线 ×6 | 宿主内置（首启写 DB） | ✅ |
-| 自动化脚本 ×6 | `scripts/*.ps1` | ✅ |
-| 测试（Rust 20 + SDK + AI 冒烟 + 30min soak） | `crates/*/tests`、`tests/` | ✅ 全部通过（0 失败） |
-| 安装包 + Portable ZIP + SHA-256 | `dist-package/` | 见第 7 节 |
-| 文档 ×11 | `docs/` + README | ✅ |
+| Tauri 2 + Rust 宿主（8 crate） | `crates/` + `apps/desktop/src-tauri/` | F9 Rust metadata/fmt/clippy 通过；启动属历史证据 |
+| Vue 3 GUI（十页导航 + SVG 节点编辑器 + Schema 参数面板） | `apps/desktop/src/` | F9 frozen install/typecheck/build 通过；GUI 运行属历史证据 |
+| Protobuf + gRPC 插件协议 v1 | `proto/voice_plugin_v1.proto` | 历史 Rust/Python 双端生成与验证证据 |
+| Python Plugin SDK | `sdk/python/voice_plugin_sdk/` | F9 SDK smoke 通过；较深 E2E 属历史证据 |
+| 示例插件 ×5 | `plugins/examples/` | 历史全部加载验证证据 |
+| 真实 AI 插件 ×4（ASR/TTS/文本工具/变声） | `plugins/ai/` | 历史 ASR/TTS/文本工具真实推理证据；VC 为真实 DSP 算法 |
+| 预置管线 ×6 | 宿主内置（首启写 DB） | 历史证据 |
+| 自动化脚本 | `scripts/*.ps1` | 当前入口见 BUILDING/TEST_REPORT；不以精确文件总数作为门禁 |
+| 当前源码测试 | `crates/*/tests`、`tests/` | F9：21 passed / 0 failed，desktop integration targets + SDK smoke 通过；AI 未运行 |
+| 安装包 + Portable ZIP + SHA-256 | `dist-package/` | 历史快照，见第 6 节；本轮未打包/发布 |
+| 文档 | `docs/` + README | 当前事实边界以 BUILDING/TEST_REPORT 为准 |
 
 ## 2. 架构落地与规格对照
 
@@ -52,7 +53,7 @@ docs/ARCHITECTURE.md 第 2 节（每个 crate 有明确"禁止"清单）。
   **禁止**插件向 WebView 注入脚本。
 - **隐私**：全本地推理、参考音频仅本机、导出脱敏、网络权限默认关闭并高亮。
 
-## 3. 真实性声明（三十二.「真实性」逐项）
+## 3. 历史真实性声明（三十二.「真实性」逐项）
 
 - 无任何 Mock 冒充推理：AI 插件直接调用真实模型（CosyVoice3 生成 4.76s 音频的
   WAV 在 logs/smoke_ai_tts.wav；ASR/断句输出在 logs/smoke_ai.log）。
@@ -72,7 +73,10 @@ docs/ARCHITECTURE.md 第 2 节（每个 crate 有明确"禁止"清单）。
 
 详见 docs/TEST_REPORT.md 与 docs/PERFORMANCE_REPORT.md：
 
-- Rust 21/21 通过（含**宿主⇄真实 worker 生命周期**：崩溃强杀后宿主存活；
+- **当前 F9 source gate PASS**：Rust metadata/fmt/clippy；前端 frozen install、typecheck/build；
+  官方非 AI Rust + desktop integration（21 passed / 0 failed，明确包含 `desktop_e2e_it.rs` 与
+  `host_pipeline_it.rs`）；Python SDK smoke。AI 未运行。
+- 以下为历史结果，不是 F9 current PASS：Rust 21/21 通过（含**宿主⇄真实 worker 生命周期**：崩溃强杀后宿主存活；
   **宿主命令层原生管线 E2E**：WAV→+6dB→录制数值验证；
   **桌面命令层插件 E2E**：自动启动/Configure/桥接/调度全链路）。
 - **手测自动化 4/4 通过**（`--example manual_test`，生产同路径）：
@@ -87,28 +91,30 @@ docs/ARCHITECTURE.md 第 2 节（每个 crate 有明确"禁止"清单）。
 - 30 分钟 soak：0.29% 错误率、VRAM 零增长、无耗时漂移。
 - **TTFA 5.2s 未达 0.8~1.5s 目标**（差距分析 + 优化路线在 PERFORMANCE_REPORT 第 2 节）。
 
-## 6. 打包（已产出，dist-package/）
+## 6. 历史打包快照（非 current release evidence）
 
-- NSIS 安装包：`Voice Studio_0.1.0_x64-setup.exe`（4.1MB，release exe 16.4MB，
-  启动冒烟通过）
-- Portable ZIP：`VoiceStudio-Portable.zip`（exe + plugins + sdk，5.7MB）
-- 校验：`SHA256SUMS.txt`（安装包 C2D74366…E796 / Portable F6400144…C9DC）
-- 大型模型/Python 依赖**不打入**安装包（bundle.resources 为空）；
-  模型经官方源放置 models/，插件运行时使用本机 .venv 或独立 venv。
+旧日志曾记录 `Voice Studio_0.1.0_x64-setup.exe`、`VoiceStudio-Portable.zip`、尺寸与截断
+SHA，并做过启动冒烟。这些值仅属于当时的生成物；本轮没有确认文件仍存在、哈希仍匹配，
+也没有执行正式打包或发布，不能作为当前安装包/Portable 可用性的证据。
+
+当前 `package.ps1` 生成的 Portable ZIP 设计上只含 exe、`plugins/` 与 `sdk/`，不含
+`.venv`、`models/` 或 Python dependencies。因此它是**宿主便携包，需另配 Python 环境、
+已批准的 torch/torchaudio 组合和模型**，不是开箱即用 AI 发行版。源码公开就绪不会自动
+批准二进制再分发；完整许可证/SBOM、模型与声音权利、发布身份仍是 owner gate。
 
 ## 7. 复现
 
 ```powershell
 .\scripts\setup.ps1        # 环境 + 构建 + 插件安装 + Smoke
 .\scripts\run.ps1          # 启动桌面应用
-.\scripts\test.ps1         # Rust 19 + SDK + AI 冒烟（-Soak 加 30 分钟）
+.\scripts\test.ps1 -SkipAi # 贡献者非 AI 基线，含完整 desktop tests
 .\scripts\diagnose.ps1
 .\scripts\package.ps1      # 安装包 + Portable + SHA-256
 ```
 
-## 8. 未完成项 / 人工验收项（不隐瞒）
+## 8. 非 F9 范围与人工验收项
 
-### 8.1 发布前已补齐（原 8.1 大部分闭环）
+### 8.1 历史人工/GUI证据（非 current release evidence）
 
 - ✅ 实机麦克风采集验证（HECATE G2，131712 帧，零溢出）
 - ✅ GUI 十页视觉验证（`--page` 深链接 + 截图）
@@ -135,7 +141,8 @@ docs/ARCHITECTURE.md 第 2 节（每个 crate 有明确"禁止"清单）。
 
 ## 9. 结论
 
-原始规格的**桌面宿主、插件系统、管线引擎、可视化编辑器、真实 AI 插件、
-SDK、预置管线、热键、持久化、崩溃恢复、打包**全部实现并有测试证据；
-**延迟目标**与**三项人工验收**（虚拟设备联调/听感/游戏内联调）未闭环，
-均在第 8 节如实列明。
+1. **GitHub 源码开源：READY。** 依据 F9 的技术门禁、文档与许可一致性本地证据，源码仓库
+   公开于 <https://github.com/RedeatI/VoiceTranslator>，并已启用 GitHub private vulnerability
+   reporting。当前没有 GitHub Release、公开二进制下载、已启用 CI 或稳定版本支持 SLA。
+2. **二进制/模型发行：NOT READY。** F9 未运行当前 package、GUI、AI/GPU 或硬件验收；第三方、
+   模型、声音及二进制再分发仍须 owner 明确批准。

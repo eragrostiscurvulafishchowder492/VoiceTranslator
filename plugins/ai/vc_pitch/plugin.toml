@@ -5,6 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "实时声音转换：音高移动 + 共振峰偏移（真实 DSP 算法，CPU 实时）。RVC/Seed-VC 适配接口见 README"
+license = "Apache-2.0"
 
 permissions = ["gpu"]
 

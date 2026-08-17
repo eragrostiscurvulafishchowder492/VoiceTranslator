@@ -9,9 +9,9 @@ pub mod voice_plugin {
 pub const HOST_PROTOCOL_VERSION: &str = "1.0";
 
 pub mod prelude {
+    pub use crate::voice_plugin::v1::*;
     pub use tonic::transport::Channel;
     pub use tonic::Request;
-    pub use crate::voice_plugin::v1::*;
 }
 
 /// 音频格式描述串："pcm_f32le@48000:1"

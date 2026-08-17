@@ -18,12 +18,17 @@ pub struct LogLine {
 
 impl LogRing {
     pub fn new(cap: usize) -> Self {
-        Self { buf: Mutex::new(VecDeque::with_capacity(cap)), cap }
+        Self {
+            buf: Mutex::new(VecDeque::with_capacity(cap)),
+            cap,
+        }
     }
 
     pub fn push(&self, level: &str, component: &str, message: impl Into<String>) {
         let mut b = self.buf.lock();
-        if b.len() >= self.cap { b.pop_front(); }
+        if b.len() >= self.cap {
+            b.pop_front();
+        }
         b.push_back(LogLine {
             ts: chrono::Local::now().format("%H:%M:%S%.3f").to_string(),
             level: level.into(),
@@ -33,12 +38,21 @@ impl LogRing {
     }
 
     pub fn snapshot(&self, last_n: usize) -> Vec<LogLine> {
-        self.buf.lock().iter().rev().take(last_n).rev().cloned().collect()
+        self.buf
+            .lock()
+            .iter()
+            .rev()
+            .take(last_n)
+            .rev()
+            .cloned()
+            .collect()
     }
 }
 
 impl Default for LogRing {
-    fn default() -> Self { Self::new(2000) }
+    fn default() -> Self {
+        Self::new(2000)
+    }
 }
 
 /// 崩溃标记：启动时写入，正常退出清除；下次启动若残留 → 提供安全模式。

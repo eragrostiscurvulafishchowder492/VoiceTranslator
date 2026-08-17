@@ -4,7 +4,10 @@ use voice_studio_desktop_lib::state::AppState;
 
 fn main() {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .ancestors().nth(3).unwrap().to_path_buf();
+        .ancestors()
+        .nth(3)
+        .unwrap()
+        .to_path_buf();
     std::env::set_var("VOICE_STUDIO_DATA", root.join("app-data"));
     let state = AppState::new(root.clone()).unwrap();
     let n = state.plugins.discover();

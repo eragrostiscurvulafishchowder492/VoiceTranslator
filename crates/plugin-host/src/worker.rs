@@ -29,8 +29,8 @@ impl WorkerHandle {
 
 pub struct SpawnConfig {
     pub python_exe: std::path::PathBuf,
-    pub sdk_path: std::path::PathBuf,     // sdk/python（PYTHONPATH 注入）
-    pub repo_root: std::path::PathBuf,    // AI 插件导入 app/ 需要
+    pub sdk_path: std::path::PathBuf, // sdk/python（PYTHONPATH 注入）
+    pub repo_root: std::path::PathBuf, // AI 插件导入 app/ 需要
     pub plugin_dir: std::path::PathBuf,
     pub manifest: PluginManifest,
     pub port: u16,
@@ -48,13 +48,16 @@ pub fn free_port() -> anyhow::Result<u16> {
 pub fn spawn_python_worker(cfg: SpawnConfig) -> anyhow::Result<WorkerHandle> {
     let mut pythonpath = vec![cfg.sdk_path.clone(), cfg.repo_root.clone()];
     pythonpath.extend(cfg.extra_path.iter().cloned());
-    let pp = std::env::join_paths(pythonpath.iter())
-        .map_err(|e| anyhow::anyhow!("join path: {e}"))?;
+    let pp =
+        std::env::join_paths(pythonpath.iter()).map_err(|e| anyhow::anyhow!("join path: {e}"))?;
 
     let mut cmd = Command::new(&cfg.python_exe);
-    cmd.arg("-m").arg("voice_plugin_sdk.server")
-        .arg("--manifest-dir").arg(&cfg.plugin_dir)
-        .arg("--port").arg(cfg.port.to_string())
+    cmd.arg("-m")
+        .arg("voice_plugin_sdk.server")
+        .arg("--manifest-dir")
+        .arg(&cfg.plugin_dir)
+        .arg("--port")
+        .arg(cfg.port.to_string())
         .env("PYTHONPATH", pp)
         .env("PYTHONUNBUFFERED", "1")
         .env("VOICE_PLUGIN_ID", &cfg.manifest.id)
@@ -70,7 +73,9 @@ pub fn spawn_python_worker(cfg: SpawnConfig) -> anyhow::Result<WorkerHandle> {
         cmd.creation_flags(CREATE_NEW_PROCESS_GROUP);
     }
 
-    let mut child = cmd.spawn().map_err(|e| anyhow::anyhow!("spawn worker 失败: {e}"))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| anyhow::anyhow!("spawn worker 失败: {e}"))?;
     let pid = child.id();
 
     // 日志采集线程（stdout/stderr 合并进内存环形缓冲，由 manager 持有）
@@ -85,9 +90,12 @@ pub fn spawn_python_worker(cfg: SpawnConfig) -> anyhow::Result<WorkerHandle> {
     let deadline = Instant::now() + Duration::from_secs(120);
     let addr = format!("127.0.0.1:{}", cfg.port);
     while Instant::now() < deadline {
-        if std::net::TcpStream::connect_timeout(&addr.parse()?, Duration::from_millis(300)).is_ok() {
+        if std::net::TcpStream::connect_timeout(&addr.parse()?, Duration::from_millis(300)).is_ok()
+        {
             return Ok(WorkerHandle {
-                pid, port: cfg.port, started_at: Instant::now(),
+                pid,
+                port: cfg.port,
+                started_at: Instant::now(),
                 child: parking_lot::Mutex::new(child),
                 stopping: Arc::new(AtomicBool::new(false)),
                 crash_count: Arc::new(AtomicU32::new(0)),
@@ -104,7 +112,6 @@ pub fn spawn_python_worker(cfg: SpawnConfig) -> anyhow::Result<WorkerHandle> {
 }
 
 fn collect_logs<R: std::io::Read + Send + 'static>(mut r: R, tag: &'static str) {
-    use std::io::Read;
     let mut buf = [0u8; 4096];
     loop {
         match r.read(&mut buf) {
@@ -129,7 +136,12 @@ pub struct RestartPolicy {
 
 impl Default for RestartPolicy {
     fn default() -> Self {
-        Self { max_crashes: 5, window: Duration::from_secs(600), base_delay: Duration::from_secs(1), crashes: Vec::new() }
+        Self {
+            max_crashes: 5,
+            window: Duration::from_secs(600),
+            base_delay: Duration::from_secs(1),
+            crashes: Vec::new(),
+        }
     }
 }
 
@@ -137,7 +149,8 @@ impl RestartPolicy {
     /// 返回 None = 达到崩溃上限，不再重启。
     pub fn next_delay(&mut self) -> Option<Duration> {
         let now = Instant::now();
-        self.crashes.retain(|t| now.duration_since(*t) < self.window);
+        self.crashes
+            .retain(|t| now.duration_since(*t) < self.window);
         if self.crashes.len() as u32 >= self.max_crashes {
             return None;
         }

@@ -16,10 +16,18 @@ __pycache__/
 *.pyc
 .venv/
 
-# 模型与依赖（大文件，D 盘本地管理）
+# 模型与依赖（大文件，本地管理，不入库）
 models/
 deps/
 data/references/
+/data/*.wav
+/data/*.flac
+/data/*.mp3
+/data/*.m4a
+/data/*.ogg
+/data/*.opus
+/data/*.aac
+/data/*.wma
 
 # 打包产物
 dist-package/

@@ -1,0 +1,80 @@
+name: Bug report
+description: Report a reproducible Voice Studio defect
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Voice Studio. Do not include secrets, private audio, personal data, or security exploit details. Report exploitable vulnerabilities through GitHub private vulnerability reporting instead.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Desktop UI
+        - Audio capture or output
+        - Pipeline engine
+        - Plugin host or Python SDK
+        - ASR, TTS, or voice conversion integration
+        - Setup, build, test, or packaging scripts
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: revision
+    attributes:
+      label: Version or commit
+      description: Use a release version when available, otherwise provide the commit SHA.
+      placeholder: 032b1dd or v0.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and its user impact.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest repeatable sequence, including the selected pipeline or plugin when relevant.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Start ...
+        4. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include Windows version, audio device class, CPU/GPU mode, and relevant tool or model versions. Remove user names and absolute paths.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or screenshots
+      description: Paste only the minimal relevant excerpt. Remove tokens, personal paths, private audio, transcripts, and model credentials.
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed secrets, personal data, private audio, and absolute user paths.
+          required: true
+        - label: This report does not contain an exploitable security vulnerability.
+          required: true

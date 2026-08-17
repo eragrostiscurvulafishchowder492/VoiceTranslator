@@ -4,10 +4,10 @@
 
 | 症状 | 处置 |
 |---|---|
-| `cargo` 不存在 | 安装 rustup（MSVC toolchain）。本机约定装 D 盘：`RUSTUP_HOME=D:\_toolchains\rustup`、`CARGO_HOME=D:\_toolchains\cargo` |
+| `cargo` 不存在 | 从 rustup 官方安装 MSVC toolchain 并将 Cargo 加入 `PATH`；或将 `VOICE_TRANSLATOR_CARGO` 设置为单一 cargo 可执行文件。自定义 `CARGO_HOME`/`RUSTUP_HOME` 是可选的本机配置，仓库不要求固定目录 |
 | Rust link 失败 | 需 VS2022「使用 C++ 的桌面开发」工作负载（MSVC v143 + Win10/11 SDK） |
 | `pnpm` 不存在 | `npm i -g pnpm` |
-| Tauri 白屏 | 先 `pnpm --filter voice-studio-desktop build` 生成 dist；release 包已内置 |
+| Tauri 白屏 | 在仓库根目录先运行 `pnpm install --frozen-lockfile`，再运行 `pnpm --filter voice-studio-desktop build` 生成 `apps/desktop/dist`；不要把历史包状态当作当前构建证据 |
 | 首次 cargo build 很慢 | 正常（Tauri/wry 依赖树 ~600 crate，10 分钟级） |
 
 ## 音频

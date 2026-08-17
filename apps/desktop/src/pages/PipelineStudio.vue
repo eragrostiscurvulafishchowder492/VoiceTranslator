@@ -108,7 +108,7 @@ async function stop() {
   statusLine.value = "已停止";
 }
 
-const filteredCats = () => categories.value.map(([c, list]) => [c,
+const filteredCats = (): [string, any[]][] => categories.value.map(([c, list]): [string, any[]] => [c,
   list.filter(s => !search.value || s.display_name.includes(search.value) || s.node_type.includes(search.value))]);
 </script>
 

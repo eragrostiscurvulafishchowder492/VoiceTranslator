@@ -5,7 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "示例插件：吞掉音频的空输出节点（测试用）"
-license = "MIT"
+license = "Apache-2.0"
 
 [runtime_requirements]
 python_env = "main"

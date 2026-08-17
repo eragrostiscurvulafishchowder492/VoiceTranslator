@@ -5,6 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "示例插件：外部命令包装（文本 → 命令 → stdout 作为输出文本）"
+license = "Apache-2.0"
 
 permissions = ["process_spawn"]
 

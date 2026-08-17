@@ -20,9 +20,11 @@ pub enum Severity {
 }
 
 /// 外部依赖检查（由宿主注入：插件安装状态、模型存在性、显存）。
+pub type ModelAvailabilityCheck<'a> = dyn Fn(&str, &str) -> bool + 'a;
+
 pub struct ExternalChecks<'a> {
     pub is_plugin_installed: Box<dyn Fn(&str) -> bool + 'a>,
-    pub has_model: Box<dyn Fn(&str, &str) -> bool + 'a>,
+    pub has_model: Box<ModelAvailabilityCheck<'a>>,
     pub total_vram_mb: u32,
     pub used_vram_mb: u32,
 }
@@ -38,7 +40,11 @@ impl<'a> Default for ExternalChecks<'a> {
     }
 }
 
-pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalChecks) -> Vec<ValidationIssue> {
+pub fn validate(
+    graph: &PipelineGraph,
+    registry: &NodeRegistry,
+    ext: &ExternalChecks,
+) -> Vec<ValidationIssue> {
     let mut issues = Vec::new();
     let node_ids: HashSet<&str> = graph.nodes.iter().map(|n| n.id.as_str()).collect();
 
@@ -49,14 +55,25 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
             let (level, code, msg) = if is_plugin_node {
                 let plugin_id = n.node_type.split('/').next().unwrap_or("");
                 if !(ext.is_plugin_installed)(plugin_id) {
-                    (Severity::Error, "PLUGIN_MISSING", format!("插件 {plugin_id} 未安装或被禁用"))
+                    (
+                        Severity::Error,
+                        "PLUGIN_MISSING",
+                        format!("插件 {plugin_id} 未安装或被禁用"),
+                    )
                 } else {
                     // 已安装未运行：启动管线时会自动拉起 worker，可校验性受限但不阻塞
-                    (Severity::Warning, "PLUGIN_NOT_RUNNING", format!(
-                        "插件 {plugin_id} 未运行，端口暂无法校验（启动管线时自动启动）"))
+                    (
+                        Severity::Warning,
+                        "PLUGIN_NOT_RUNNING",
+                        format!("插件 {plugin_id} 未运行，端口暂无法校验（启动管线时自动启动）"),
+                    )
                 }
             } else {
-                (Severity::Error, "UNKNOWN_NODE_TYPE", format!("未知节点类型 {}", n.node_type))
+                (
+                    Severity::Error,
+                    "UNKNOWN_NODE_TYPE",
+                    format!("未知节点类型 {}", n.node_type),
+                )
             };
             issues.push(ValidationIssue {
                 level,
@@ -95,29 +112,49 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
             issues.push(edge_err("DANGLING_EDGE", "边引用了不存在的节点".into()));
             continue;
         };
-        let (Some(fs), Some(ts)) = (registry.get(&from.node_type), registry.get(&to.node_type)) else {
+        let (Some(fs), Some(ts)) = (registry.get(&from.node_type), registry.get(&to.node_type))
+        else {
             continue; // 上面的 UNKNOWN_NODE_TYPE 已报
         };
         let Some(fport) = fs.outputs.iter().find(|p| p.name == e.from_port) else {
-            issues.push(edge_err("PORT_MISSING", format!("节点 {} 无输出端口 {}", from.label, e.from_port)));
+            issues.push(edge_err(
+                "PORT_MISSING",
+                format!("节点 {} 无输出端口 {}", from.label, e.from_port),
+            ));
             continue;
         };
         let Some(tport) = ts.inputs.iter().find(|p| p.name == e.to_port) else {
-            issues.push(edge_err("PORT_MISSING", format!("节点 {} 无输入端口 {}", to.label, e.to_port)));
+            issues.push(edge_err(
+                "PORT_MISSING",
+                format!("节点 {} 无输入端口 {}", to.label, e.to_port),
+            ));
             continue;
         };
         if fport.port_type != tport.port_type {
-            issues.push(edge_err("TYPE_MISMATCH", format!(
-                "端口类型不兼容：{} ({}) → {} ({})",
-                e.from_port, fport.port_type.as_str(), e.to_port, tport.port_type.as_str())));
+            issues.push(edge_err(
+                "TYPE_MISMATCH",
+                format!(
+                    "端口类型不兼容：{} ({}) → {} ({})",
+                    e.from_port,
+                    fport.port_type.as_str(),
+                    e.to_port,
+                    tport.port_type.as_str()
+                ),
+            ));
             continue;
         }
         if fport.port_type == PortType::AudioPcm {
-            if fport.sample_rate != 0 && tport.sample_rate != 0 && fport.sample_rate != tport.sample_rate {
+            if fport.sample_rate != 0
+                && tport.sample_rate != 0
+                && fport.sample_rate != tport.sample_rate
+            {
                 issues.push(ValidationIssue {
                     level: Severity::Warning,
                     code: "RATE_MISMATCH".into(),
-                    message: format!("采样率 {} → {}，可自动插入 Resampler", fport.sample_rate, tport.sample_rate),
+                    message: format!(
+                        "采样率 {} → {}，可自动插入 Resampler",
+                        fport.sample_rate, tport.sample_rate
+                    ),
                     node_id: None,
                     edge_id: Some(e.id.clone()),
                 });
@@ -126,7 +163,10 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
                 issues.push(ValidationIssue {
                     level: Severity::Warning,
                     code: "CHANNEL_MISMATCH".into(),
-                    message: format!("声道 {} → {}，可自动插入 Channel Converter", fport.channels, tport.channels),
+                    message: format!(
+                        "声道 {} → {}，可自动插入 Channel Converter",
+                        fport.channels, tport.channels
+                    ),
                     node_id: None,
                     edge_id: Some(e.id.clone()),
                 });
@@ -137,10 +177,14 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
 
     // 3) 必需输入端口必须连线
     for n in &graph.nodes {
-        let Some(spec) = registry.get(&n.node_type) else { continue };
+        let Some(spec) = registry.get(&n.node_type) else {
+            continue;
+        };
         for p in &spec.inputs {
             if p.required {
-                let connected = graph.edges.iter()
+                let connected = graph
+                    .edges
+                    .iter()
                     .any(|e| e.to_node == n.id && e.to_port == p.name);
                 if !connected {
                     issues.push(ValidationIssue {
@@ -157,7 +201,9 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
 
     // 4) 必需参数（schema required 字段）
     for n in &graph.nodes {
-        let Some(spec) = registry.get(&n.node_type) else { continue };
+        let Some(spec) = registry.get(&n.node_type) else {
+            continue;
+        };
         if let Some(schema) = &spec.params_schema {
             if let Some(req) = schema.get("required").and_then(|r| r.as_array()) {
                 for r in req.iter().filter_map(|v| v.as_str()) {
@@ -190,7 +236,9 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
     // 6) 模型存在性 + 显存预检
     let mut est_vram = 0u32;
     for n in &graph.nodes {
-        let Some(spec) = registry.get(&n.node_type) else { continue };
+        let Some(spec) = registry.get(&n.node_type) else {
+            continue;
+        };
         est_vram += spec.estimated_vram_mb.max(0) as u32;
         if let Some(model_id) = n.params.get("model").and_then(|m| m.as_str()) {
             if !model_id.is_empty() && !(ext.has_model)(model_id, &n.node_type) {
@@ -210,7 +258,10 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
             issues.push(ValidationIssue {
                 level: Severity::Warning,
                 code: "VRAM_TIGHT".into(),
-                message: format!("显存预检：预计 {}MB > 可用 {}MB（可能 OOM）", est_vram, avail),
+                message: format!(
+                    "显存预检：预计 {}MB > 可用 {}MB（可能 OOM）",
+                    est_vram, avail
+                ),
                 node_id: None,
                 edge_id: None,
             });
@@ -225,14 +276,28 @@ pub fn validate(graph: &PipelineGraph, registry: &NodeRegistry, ext: &ExternalCh
 /// DFS 环检测，返回一条环路径。
 fn find_cycle(graph: &PipelineGraph) -> Option<Vec<String>> {
     #[derive(Clone, Copy, PartialEq)]
-    enum Mark { White, Gray, Black }
-    let mut marks: HashMap<&str, Mark> = graph.nodes.iter().map(|n| (n.id.as_str(), Mark::White)).collect();
+    enum Mark {
+        White,
+        Gray,
+        Black,
+    }
+    let mut marks: HashMap<&str, Mark> = graph
+        .nodes
+        .iter()
+        .map(|n| (n.id.as_str(), Mark::White))
+        .collect();
     let mut adj: HashMap<&str, Vec<&str>> = HashMap::new();
     for e in &graph.edges {
-        adj.entry(e.from_node.as_str()).or_default().push(e.to_node.as_str());
+        adj.entry(e.from_node.as_str())
+            .or_default()
+            .push(e.to_node.as_str());
     }
-    fn dfs<'g>(u: &'g str, adj: &HashMap<&'g str, Vec<&'g str>>, marks: &mut HashMap<&'g str, Mark>,
-               path: &mut Vec<String>) -> Option<Vec<String>> {
+    fn dfs<'g>(
+        u: &'g str,
+        adj: &HashMap<&'g str, Vec<&'g str>>,
+        marks: &mut HashMap<&'g str, Mark>,
+        path: &mut Vec<String>,
+    ) -> Option<Vec<String>> {
         marks.insert(u, Mark::Gray);
         path.push(u.to_string());
         for &v in adj.get(u).map(|v| v.as_slice()).unwrap_or(&[]) {
@@ -242,7 +307,9 @@ fn find_cycle(graph: &PipelineGraph) -> Option<Vec<String>> {
                     return Some(path[start..].to_vec());
                 }
                 Mark::White => {
-                    if let Some(c) = dfs(v, adj, marks, path) { return Some(c); }
+                    if let Some(c) = dfs(v, adj, marks, path) {
+                        return Some(c);
+                    }
                 }
                 Mark::Black => {}
             }

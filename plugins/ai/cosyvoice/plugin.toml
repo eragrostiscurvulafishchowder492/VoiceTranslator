@@ -5,7 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "CosyVoice3-0.5B zero-shot 流式 TTS（用户参考音色，本地推理）"
-license = "Apache-2.0 (模型遵循官方许可)"
+license = "Apache-2.0"
 
 permissions = ["gpu", "filesystem_read"]
 

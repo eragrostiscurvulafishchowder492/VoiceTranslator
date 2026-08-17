@@ -33,20 +33,40 @@ impl AudioCapture {
 
         let stream = match cfg.sample_format() {
             SampleFormat::F32 => dev.build_input_stream(
-                &cfg.into(), move |data: &[f32], _: &InputCallbackInfo| on_data(data, ch, &mut chain, &ring_w), err_cb, None)?,
+                &cfg.into(),
+                move |data: &[f32], _: &InputCallbackInfo| on_data(data, ch, &mut chain, &ring_w),
+                err_cb,
+                None,
+            )?,
             SampleFormat::I16 => dev.build_input_stream(
-                &cfg.into(), move |data: &[i16], _: &InputCallbackInfo| {
+                &cfg.into(),
+                move |data: &[i16], _: &InputCallbackInfo| {
                     let f: Vec<f32> = data.iter().map(|s| *s as f32 / 32768.0).collect();
                     on_data(&f, ch, &mut chain, &ring_w)
-                }, err_cb, None)?,
+                },
+                err_cb,
+                None,
+            )?,
             other => anyhow::bail!("不支持的采样格式: {other:?}"),
         };
         stream.play()?;
-        Ok(Self { ring, stream: Some(stream), device_key: device_key.into(), sample_rate: rate, channels: ch })
+        Ok(Self {
+            ring,
+            stream: Some(stream),
+            device_key: device_key.into(),
+            sample_rate: rate,
+            channels: ch,
+        })
     }
 
-    pub fn overflow_count(&self) -> u64 { self.ring.stats().0 }
-    pub fn stop(&mut self) { if let Some(s) = self.stream.take() { s.pause().ok(); } }
+    pub fn overflow_count(&self) -> u64 {
+        self.ring.stats().0
+    }
+    pub fn stop(&mut self) {
+        if let Some(s) = self.stream.take() {
+            s.pause().ok();
+        }
+    }
 }
 
 fn on_data(data: &[f32], ch: u16, chain: &mut PreChain, ring: &RingBuffer) {
@@ -54,7 +74,9 @@ fn on_data(data: &[f32], ch: u16, chain: &mut PreChain, ring: &RingBuffer) {
     let mono: Vec<f32> = if ch == 1 {
         data.to_vec()
     } else {
-        data.chunks(ch as usize).map(|c| c.iter().sum::<f32>() / c.len() as f32).collect()
+        data.chunks(ch as usize)
+            .map(|c| c.iter().sum::<f32>() / c.len() as f32)
+            .collect()
     };
     let processed: Vec<f32> = mono.iter().map(|&s| chain.process(s)).collect();
     ring.push(&processed);

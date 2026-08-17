@@ -20,7 +20,8 @@ fn manifest_parse_and_validate() {
 
 #[test]
 fn manifest_rejects_unknown_permission() {
-    let r = PluginManifest::parse_toml(r#"
+    let r = PluginManifest::parse_toml(
+        r#"
 id = "org.x.y"
 name = "X"
 version = "1.0"
@@ -28,21 +29,25 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "a:b"
 permissions = ["superuser"]
-"#);
+"#,
+    );
     assert!(r.is_err(), "未知权限必须被拒绝（解析期拒绝）: {r:?}");
 }
 
 #[test]
 fn api_version_major_negotiation() {
-    let m = PluginManifest::parse_toml(r#"
+    let m = PluginManifest::parse_toml(
+        r#"
 id = "org.x.y"
 name = "X"
 version = "1.0"
 api_version = "1.4"
 runtime = "python"
 entrypoint = "a:b"
-"#).unwrap();
-    assert!(m.api_compatible("1.0"));  // 主版本一致
+"#,
+    )
+    .unwrap();
+    assert!(m.api_compatible("1.0")); // 主版本一致
     assert!(!m.api_compatible("2.0")); // 主版本不同 → 拒绝
 }
 
@@ -57,9 +62,11 @@ fn install_zip_roundtrip_and_checksum() {
     {
         let f = std::fs::File::create(&zip_path).unwrap();
         let mut w = zip::ZipWriter::new(f);
-        w.start_file("plugin.toml", zip::write::SimpleFileOptions::default()).unwrap();
+        w.start_file("plugin.toml", zip::write::SimpleFileOptions::default())
+            .unwrap();
         w.write_all(b"id = \"org.test.zipper\"\nname = \"Z\"\nversion = \"1.0\"\napi_version = \"1.0\"\nruntime = \"python\"\nentrypoint = \"a:b\"\n").unwrap();
-        w.start_file("python/a.py", zip::write::SimpleFileOptions::default()).unwrap();
+        w.start_file("python/a.py", zip::write::SimpleFileOptions::default())
+            .unwrap();
         w.write_all(b"print('hi')\n").unwrap();
         w.finish().unwrap();
     }
@@ -79,7 +86,8 @@ fn install_zip_rejects_path_traversal() {
     {
         let f = std::fs::File::create(&zip_path).unwrap();
         let mut w = zip::ZipWriter::new(f);
-        w.start_file("../evil.txt", zip::write::SimpleFileOptions::default()).unwrap();
+        w.start_file("../evil.txt", zip::write::SimpleFileOptions::default())
+            .unwrap();
         w.write_all(b"pwn").unwrap();
         w.finish().unwrap();
     }
@@ -95,6 +103,8 @@ fn restart_policy_backoff_and_limit() {
     let d2 = p.next_delay().unwrap();
     assert!(d2 > d1, "退避应递增: {d1:?} → {d2:?}");
     // 次数超限 → None（不再重启）
-    for _ in 0..5 { let _ = p.next_delay(); }
+    for _ in 0..5 {
+        let _ = p.next_delay();
+    }
     assert!(p.next_delay().is_none());
 }

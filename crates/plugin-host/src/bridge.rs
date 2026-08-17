@@ -1,6 +1,7 @@
 //! 插件桥：pipeline-core 消息 ⇄ gRPC PluginMessage 转换与路由。
 use parking_lot::RwLock;
 use std::sync::Arc;
+use voice_pipeline_core::runtime::PluginOutputRouter;
 use voice_pipeline_core::types::*;
 use voice_plugin_protocol::voice_plugin::v1 as pb;
 
@@ -9,7 +10,7 @@ pub struct PluginBridgeImpl {
     /// 宿主 → worker（tokio mpsc，由 manager.open_stream 挂载）
     outbox: RwLock<Option<tokio::sync::mpsc::UnboundedSender<pb::PluginMessage>>>,
     /// worker → 引擎边通道
-    router: RwLock<Option<Arc<dyn Fn(&str, &str, Msg) + Send + Sync>>>,
+    router: RwLock<Option<Arc<PluginOutputRouter>>>,
     seq: std::sync::atomic::AtomicU64,
 }
 
@@ -29,7 +30,9 @@ impl PluginBridgeImpl {
 
     /// worker 输出 → 引擎路由。
     pub fn route_from_worker(&self, msg: pb::PluginMessage) {
-        let Some(router) = self.router.read().clone() else { return };
+        let Some(router) = self.router.read().clone() else {
+            return;
+        };
         let node = msg.source_node.clone();
         let port = msg.source_port.clone();
         if let Some(m) = pb_to_msg(&msg) {
@@ -44,12 +47,17 @@ impl voice_pipeline_core::runtime::PluginBridge for PluginBridgeImpl {
         let Some(tx) = outbox.as_ref() else {
             anyhow::bail!("插件 {} 数据面未打开", self.plugin_id);
         };
-        let pbmsg = msg_to_pb(target_node, msg, self.seq.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
-        tx.send(pbmsg).map_err(|_| anyhow::anyhow!("插件 {} 流已关闭", self.plugin_id))?;
+        let pbmsg = msg_to_pb(
+            target_node,
+            msg,
+            self.seq.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
+        );
+        tx.send(pbmsg)
+            .map_err(|_| anyhow::anyhow!("插件 {} 流已关闭", self.plugin_id))?;
         Ok(())
     }
 
-    fn set_router(&self, router: Arc<dyn Fn(&str, &str, Msg) + Send + Sync>) {
+    fn set_router(&self, router: Arc<PluginOutputRouter>) {
         *self.router.write() = Some(router);
     }
 }
@@ -169,5 +177,10 @@ fn pb_to_msg(m: &pb::PluginMessage) -> Option<Msg> {
             timestamp_ns: mm.timestamp_ns,
         }),
     };
-    Some(Msg { from_node: m.source_node.clone(), from_port: m.source_port.clone(), ts_ns: voice_common::timeutil::now_ns(), payload })
+    Some(Msg {
+        from_node: m.source_node.clone(),
+        from_port: m.source_port.clone(),
+        ts_ns: voice_common::timeutil::now_ns(),
+        payload,
+    })
 }

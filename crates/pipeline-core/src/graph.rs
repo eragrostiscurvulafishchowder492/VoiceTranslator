@@ -36,7 +36,9 @@ pub struct Edge {
     pub capacity: usize,
 }
 
-fn default_capacity() -> usize { 64 }
+fn default_capacity() -> usize {
+    64
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PipelineGraph {
@@ -77,7 +79,9 @@ impl PipelineGraph {
     }
 
     pub fn save_json(&self, path: &std::path::Path) -> anyhow::Result<()> {
-        if let Some(dir) = path.parent() { std::fs::create_dir_all(dir)?; }
+        if let Some(dir) = path.parent() {
+            std::fs::create_dir_all(dir)?;
+        }
         std::fs::write(path, serde_json::to_string_pretty(self)?)?;
         Ok(())
     }

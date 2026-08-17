@@ -41,7 +41,7 @@ const nodeH = (t: string) => H_HEADER + Math.max(inCount(t), specOf(t)?.outputs.
 
 interface DragState { mode: "none" | "pan" | "node" | "wire"; x0: number; y0: number; node?: string; port?: string; isOut?: boolean }
 const drag = reactive<DragState>({ mode: "none", x0: 0, y0: 0 });
-const wireEnd = ref<{ x: number; y: number } | null>(null);
+const wireEnd = ref<[number, number] | null>(null);
 
 function snapshot() {
   undoStack.value.push(JSON.stringify({ nodes: props.nodes, edges: props.edges }));
@@ -152,7 +152,7 @@ function onMouseDown(ev: MouseEvent) {
     const nodeId = pd.dataset.node!, port = pd.dataset.port!;
     const isOut = pd.dataset.dir === "out";
     drag.mode = "wire"; drag.node = nodeId; drag.port = port; drag.isOut = isOut;
-    wireEnd.value = [wx, wy] as any;
+    wireEnd.value = [wx, wy];
     return;
   }
   if (nd) {
@@ -177,7 +177,7 @@ function onMouseMove(ev: MouseEvent) {
   if (!svg) return;
   const rect = svg.getBoundingClientRect();
   if (drag.mode === "wire") {
-    wireEnd.value = toWorld(ev.clientX - rect.left, ev.clientY - rect.top) as any;
+    wireEnd.value = toWorld(ev.clientX - rect.left, ev.clientY - rect.top);
   } else if (drag.mode === "node" && sel.value.size) {
     const wx = (ev.clientX - rect.left - view.x) / view.k;
     const wy = (ev.clientY - rect.top - view.y) / view.k;

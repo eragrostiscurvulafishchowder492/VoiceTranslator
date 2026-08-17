@@ -3,7 +3,7 @@ name = "voice-studio-desktop"
 version = "0.1.0"
 description = "Voice Studio — 可插拔实时语音工作台"
 edition = "2021"
-license = "MIT"
+license.workspace = true
 
 [lib]
 name = "voice_studio_desktop_lib"

@@ -12,7 +12,9 @@ impl RingBuffer {
     pub fn new(cap_pow2: usize) -> Self {
         let cap = cap_pow2.max(2).next_power_of_two();
         Self {
-            buf: (0..cap).map(|_| std::sync::atomic::AtomicU32::new(0)).collect(),
+            buf: (0..cap)
+                .map(|_| std::sync::atomic::AtomicU32::new(0))
+                .collect(),
             cap,
             head: std::sync::atomic::AtomicUsize::new(0),
             tail: std::sync::atomic::AtomicUsize::new(0),

@@ -1,8 +1,8 @@
 //! 公共基础：路径、ID、时间、错误、日志。
-pub mod paths;
 pub mod ids;
-pub mod timeutil;
 pub mod logging;
+pub mod paths;
+pub mod timeutil;
 
 pub use paths::AppPaths;
 

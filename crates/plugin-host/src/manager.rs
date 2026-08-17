@@ -4,7 +4,7 @@ use crate::manifest::{self, PluginManifest};
 use crate::worker::{self, RestartPolicy, SpawnConfig, WorkerHandle};
 use parking_lot::{Mutex, RwLock};
 use serde::Serialize;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{hash_map::Entry, HashMap, VecDeque};
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -63,10 +63,17 @@ impl PluginManager {
             .worker_threads(2)
             .enable_all()
             .build()?;
-        Ok(Self { paths, repo_root, plugins: Arc::new(RwLock::new(HashMap::new())), runtime })
+        Ok(Self {
+            paths,
+            repo_root,
+            plugins: Arc::new(RwLock::new(HashMap::new())),
+            runtime,
+        })
     }
 
-    pub fn repo_root(&self) -> &PathBuf { &self.repo_root }
+    pub fn repo_root(&self) -> &PathBuf {
+        &self.repo_root
+    }
 
     /// discover：扫描插件目录（生命周期第一步）。
     pub fn discover(&self) -> usize {
@@ -75,14 +82,17 @@ impl PluginManager {
         if let Ok(rd) = std::fs::read_dir(self.paths.plugins()) {
             for entry in rd.flatten() {
                 let dir = entry.path();
-                if !dir.join("plugin.toml").exists() { continue; }
+                if !dir.join("plugin.toml").exists() {
+                    continue;
+                }
                 match manifest::load_manifest(&dir) {
                     Ok(m) => {
                         let id = m.id.clone();
                         let verified = manifest::verify_checksums(&dir)
-                            .map(|p| p.is_empty()).unwrap_or(false);
-                        if !map.contains_key(&id) {
-                            map.insert(id, PluginEntry {
+                            .map(|p| p.is_empty())
+                            .unwrap_or(false);
+                        if let Entry::Vacant(entry) = map.entry(id) {
+                            entry.insert(PluginEntry {
                                 enabled: true,
                                 state: Mutex::new("stopped".into()),
                                 detail: Mutex::new(String::new()),
@@ -117,7 +127,9 @@ impl PluginManager {
         self.stop_plugin(id).ok();
         let dir = {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             e.dir.clone()
         };
         std::fs::remove_dir_all(&dir)?;
@@ -130,7 +142,9 @@ impl PluginManager {
             self.stop_plugin(id).ok();
         }
         let mut map = self.plugins.write();
-        let e = map.get_mut(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+        let e = map
+            .get_mut(id)
+            .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
         e.enabled = enabled;
         Ok(())
     }
@@ -144,14 +158,31 @@ impl PluginManager {
     pub fn prepare_env(&self, id: &str) -> anyhow::Result<(u64, String)> {
         let (manifest, env_dir, req_file) = {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             let dir = self.paths.plugin_envs().join(id.replace(['.', '/'], "_"));
-            (e.manifest.clone(), dir, e.manifest.runtime_requirements.requirements_file.clone())
+            (
+                e.manifest.clone(),
+                dir,
+                e.manifest.runtime_requirements.requirements_file.clone(),
+            )
         };
-        anyhow::ensure!(manifest.runtime_requirements.python_env == "isolated",
-            "插件 {} 未声明 isolated 环境", id);
-        let main_py = self.repo_root.join(".venv").join("Scripts").join("python.exe");
-        anyhow::ensure!(main_py.exists(), "主 Python 环境不存在: {}", main_py.display());
+        anyhow::ensure!(
+            manifest.runtime_requirements.python_env == "isolated",
+            "插件 {} 未声明 isolated 环境",
+            id
+        );
+        let main_py = self
+            .repo_root
+            .join(".venv")
+            .join("Scripts")
+            .join("python.exe");
+        anyhow::ensure!(
+            main_py.exists(),
+            "主 Python 环境不存在: {}",
+            main_py.display()
+        );
 
         let t0 = std::time::Instant::now();
         if env_dir.exists() {
@@ -161,18 +192,30 @@ impl PluginManager {
         let out = std::process::Command::new(&main_py)
             .args(["-m", "venv", env_dir.to_string_lossy().as_ref()])
             .output()?;
-        anyhow::ensure!(out.status.success(), "venv 创建失败: {}",
-            String::from_utf8_lossy(&out.stderr));
+        anyhow::ensure!(
+            out.status.success(),
+            "venv 创建失败: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
         let mut log = format!("venv 创建于 {}\n", env_dir.display());
 
         // SDK 运行时依赖（worker 必需，与插件自身依赖无关）
         {
             let pip = env_dir.join("Scripts").join("pip.exe");
             let out = std::process::Command::new(&pip)
-                .args(["install", "--disable-pip-version-check", "grpcio", "protobuf"])
+                .args([
+                    "install",
+                    "--disable-pip-version-check",
+                    "grpcio",
+                    "protobuf",
+                ])
                 .output()?;
-            anyhow::ensure!(out.status.success(), "SDK 依赖安装失败: {}{}",
-                String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
+            anyhow::ensure!(
+                out.status.success(),
+                "SDK 依赖安装失败: {}{}",
+                String::from_utf8_lossy(&out.stdout),
+                String::from_utf8_lossy(&out.stderr)
+            );
             log.push_str("sdk deps (grpcio, protobuf) installed\n");
         }
 
@@ -185,8 +228,11 @@ impl PluginManager {
                 let out = std::process::Command::new(pip)
                     .args(["install", "-r", req.to_string_lossy().as_ref()])
                     .output()?;
-                log.push_str(&format!("pip install: {}\n{}",
-                    out.status, String::from_utf8_lossy(&out.stdout)));
+                log.push_str(&format!(
+                    "pip install: {}\n{}",
+                    out.status,
+                    String::from_utf8_lossy(&out.stdout)
+                ));
             }
         }
         Ok((t0.elapsed().as_millis() as u64, log))
@@ -199,7 +245,10 @@ impl PluginManager {
 
     /// 插件私有数据目录。
     fn data_dir(&self, id: &str) -> PathBuf {
-        self.paths.plugins().join(id.replace(['.', '/'], "_")).join("_data")
+        self.paths
+            .plugins()
+            .join(id.replace(['.', '/'], "_"))
+            .join("_data")
     }
 
     fn python_exe_for(&self, m: &PluginManifest) -> anyhow::Result<PathBuf> {
@@ -208,11 +257,19 @@ impl PluginManager {
             "isolated" => {
                 let venv = self.paths.plugin_envs().join(m.id.replace(['.', '/'], "_"));
                 let p = venv.join("Scripts").join("python.exe");
-                anyhow::ensure!(p.exists(), "插件独立环境不存在（先在 GUI 执行环境修复）: {}", venv.display());
+                anyhow::ensure!(
+                    p.exists(),
+                    "插件独立环境不存在（先在 GUI 执行环境修复）: {}",
+                    venv.display()
+                );
                 p
             }
             _ => {
-                let p = self.repo_root.join(".venv").join("Scripts").join("python.exe");
+                let p = self
+                    .repo_root
+                    .join(".venv")
+                    .join("Scripts")
+                    .join("python.exe");
                 anyhow::ensure!(p.exists(), "主 Python 环境不存在: {}", p.display());
                 p
             }
@@ -224,17 +281,26 @@ impl PluginManager {
     pub fn start_plugin(&self, id: &str) -> anyhow::Result<()> {
         {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             anyhow::ensure!(e.enabled, "插件已禁用");
             anyhow::ensure!(*e.state.lock() != "running", "插件已在运行");
         }
-        let (cfg0, bridge, restarts, logs) = {
+        let (cfg0, restarts, logs) = {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             let port = worker::free_port()?;
             let python = self.python_exe_for(&e.manifest)?;
-            let extra: Vec<PathBuf> = e.manifest.runtime_requirements.extra_python_path
-                .iter().map(|p| self.repo_root.join(p)).collect();
+            let extra: Vec<PathBuf> = e
+                .manifest
+                .runtime_requirements
+                .extra_python_path
+                .iter()
+                .map(|p| self.repo_root.join(p))
+                .collect();
             (
                 SpawnConfig {
                     python_exe: python,
@@ -245,7 +311,6 @@ impl PluginManager {
                     port,
                     extra_path: extra,
                 },
-                None::<Arc<crate::bridge::PluginBridgeImpl>>, // 数据面统一在下方 ensure_bridge 建立
                 e.restarts.clone(),
                 e.logs.clone(),
             )
@@ -276,25 +341,35 @@ impl PluginManager {
             let mut map = self.plugins.write();
             let e = map.get_mut(id).unwrap();
             if e.bridge.is_none() {
-                e.bridge = Some(Arc::new(crate::bridge::PluginBridgeImpl::new(id.to_string())));
+                e.bridge = Some(Arc::new(crate::bridge::PluginBridgeImpl::new(
+                    id.to_string(),
+                )));
             }
             e.bridge.clone().unwrap()
         };
         self.open_stream(id, bridge.clone(), port);
 
         // 崩溃监控 + 心跳
-        self.spawn_monitors(id, Some(bridge), restarts, logs, port);
+        self.spawn_monitors(id, restarts, logs, port);
         Ok(())
     }
 
     /// 向运行中的插件发送节点实例配置（管线启动前必须，含 __node_type__ 路由键）。
-    pub fn configure_node(&self, id: &str, node_type: &str, instance_id: &str, params_json: &str)
-        -> anyhow::Result<()> {
+    pub fn configure_node(
+        &self,
+        id: &str,
+        node_type: &str,
+        instance_id: &str,
+        params_json: &str,
+    ) -> anyhow::Result<()> {
         let port = {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             let w = e.worker.read();
-            w.as_ref().map(|w| w.port)
+            w.as_ref()
+                .map(|w| w.port)
                 .ok_or_else(|| anyhow::anyhow!("插件未运行: {id}"))?
         };
         self.runtime.block_on(async {
@@ -305,48 +380,68 @@ impl PluginManager {
                 .await
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
             let mut client = VoicePluginClient::new(ch);
-            client.configure(ConfigRequest {
-                node_type: node_type.into(),
-                instance_id: instance_id.into(),
-                params_json: params_json.into(),
-            }).await
+            client
+                .configure(ConfigRequest {
+                    node_type: node_type.into(),
+                    instance_id: instance_id.into(),
+                    params_json: params_json.into(),
+                })
+                .await
                 .map_err(|e| anyhow::anyhow!("configure rpc: {e}"))
                 .map(|_| ())
         })
     }
 
-    fn handshake(&self, id: &str, port: u16)
-        -> anyhow::Result<(Vec<NodeTypeDescriptor>, Vec<String>)> {
+    fn handshake(
+        &self,
+        id: &str,
+        port: u16,
+    ) -> anyhow::Result<(Vec<NodeTypeDescriptor>, Vec<String>)> {
         let req = HandshakeRequest {
             host_protocol_version: voice_plugin_protocol::HOST_PROTOCOL_VERSION.into(),
             host_app_version: env!("CARGO_PKG_VERSION").into(),
             supported_features: vec![
-                "stream_audio".into(), "stream_text".into(), "tts".into(),
-                "interrupt".into(), "metrics".into(),
+                "stream_audio".into(),
+                "stream_text".into(),
+                "tts".into(),
+                "interrupt".into(),
+                "metrics".into(),
             ],
             supported_audio_formats: vec![voice_plugin_protocol::format_audio(48_000, 1)],
             plugin_dir: String::new(),
             data_dir: self.data_dir(id).to_string_lossy().into_owned(),
         };
         let resp = self.runtime.block_on(async {
-            let channel = tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
-                .map_err(|e| anyhow::anyhow!("{e}"))?
-                .connect_timeout(Duration::from_secs(10))
-                .connect()
-                .await
-                .map_err(|e| anyhow::anyhow!("{e}"))?;
+            let channel =
+                tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
+                    .map_err(|e| anyhow::anyhow!("{e}"))?
+                    .connect_timeout(Duration::from_secs(10))
+                    .connect()
+                    .await
+                    .map_err(|e| anyhow::anyhow!("{e}"))?;
             let mut client = VoicePluginClient::new(channel);
-            client.handshake(req).await
+            client
+                .handshake(req)
+                .await
                 .map_err(|e| anyhow::anyhow!("handshake rpc: {e}"))
                 .map(|r| r.into_inner())
         })?;
         if !resp.ok {
             anyhow::bail!("插件握手失败: {}", resp.error);
         }
-        let host_major = voice_plugin_protocol::HOST_PROTOCOL_VERSION.split('.').next().unwrap_or("1");
-        let plugin_major = resp.plugin_protocol_version.split('.').next().unwrap_or("0");
-        anyhow::ensure!(host_major == plugin_major,
-            "协议不兼容：宿主 v{host_major}.x，插件 v{plugin_major}.x（拒绝运行）");
+        let host_major = voice_plugin_protocol::HOST_PROTOCOL_VERSION
+            .split('.')
+            .next()
+            .unwrap_or("1");
+        let plugin_major = resp
+            .plugin_protocol_version
+            .split('.')
+            .next()
+            .unwrap_or("0");
+        anyhow::ensure!(
+            host_major == plugin_major,
+            "协议不兼容：宿主 v{host_major}.x，插件 v{plugin_major}.x（拒绝运行）"
+        );
         Ok((resp.node_types, resp.supported_execution_providers))
     }
 
@@ -356,8 +451,8 @@ impl PluginManager {
         let bridge2 = bridge.clone();
         let id_owned = id.to_string();
         self.runtime.spawn(async move {
-            use tonic::transport::Endpoint;
             use tokio_stream::wrappers::UnboundedReceiverStream;
+            use tonic::transport::Endpoint;
             let channel = Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
                 .unwrap()
                 .connect_timeout(Duration::from_secs(10))
@@ -382,15 +477,22 @@ impl PluginManager {
         });
     }
 
-    fn spawn_monitors(&self, id: &str, bridge: Option<Arc<crate::bridge::PluginBridgeImpl>>,
-                      _restarts: Arc<std::sync::atomic::AtomicU32>,
-                      _logs: Arc<Mutex<VecDeque<String>>>, port: u16) {
+    fn spawn_monitors(
+        &self,
+        id: &str,
+        _restarts: Arc<std::sync::atomic::AtomicU32>,
+        _logs: Arc<Mutex<VecDeque<String>>>,
+        port: u16,
+    ) {
         // 心跳：连续 3 次失败 → 杀进程 → 由退出监控重启
         let plugins = self.plugins.clone();
         let id2 = id.to_string();
         let mut policy = RestartPolicy::default();
         std::thread::spawn(move || {
-            let rt = tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap();
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
             loop {
                 std::thread::sleep(Duration::from_secs(5));
                 let (state, enabled, alive) = {
@@ -400,15 +502,26 @@ impl PluginManager {
                     let alive = e.worker.read().is_some();
                     (state, e.enabled, alive)
                 };
-                if !enabled || state != "running" || !alive { continue; }
-                let ok = rt.block_on(async {
-                    use tonic::transport::Endpoint;
-                    let ch = Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
-                        .unwrap().connect_timeout(Duration::from_secs(3)).connect().await.ok()?;
-                    let mut c = VoicePluginClient::new(ch);
-                    tokio::time::timeout(Duration::from_secs(3), c.health(Empty {}))
-                        .await.ok()?.map(|r| r.into_inner().status == "ok").ok()
-                }).unwrap_or(false);
+                if !enabled || state != "running" || !alive {
+                    continue;
+                }
+                let ok = rt
+                    .block_on(async {
+                        use tonic::transport::Endpoint;
+                        let ch = Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
+                            .unwrap()
+                            .connect_timeout(Duration::from_secs(3))
+                            .connect()
+                            .await
+                            .ok()?;
+                        let mut c = VoicePluginClient::new(ch);
+                        tokio::time::timeout(Duration::from_secs(3), c.health(Empty {}))
+                            .await
+                            .ok()?
+                            .map(|r| r.into_inner().status == "ok")
+                            .ok()
+                    })
+                    .unwrap_or(false);
                 if !ok {
                     log::warn!("插件 {id2} 心跳失败");
                     // 进程可能僵死：kill 触发重启路径
@@ -425,18 +538,21 @@ impl PluginManager {
         // 崩溃退出监控 + 指数退避重启（崩溃次数限制）
         let plugins2 = self.plugins.clone();
         let id3 = id.to_string();
-        let bridge3 = bridge.clone();
         std::thread::spawn(move || loop {
             std::thread::sleep(Duration::from_millis(500));
             let exited = {
                 let map = plugins2.read();
                 let Some(e) = map.get(&id3) else { return };
-                if !e.enabled { continue; }
+                if !e.enabled {
+                    continue;
+                }
                 let guard = e.worker.read();
                 let Some(w) = guard.as_ref() else { continue };
                 w.try_wait_exited()
             };
-            if !exited { continue; }
+            if !exited {
+                continue;
+            }
             // 退出：清句柄，决定是否重启
             let (should_restart, prev_bridge) = {
                 let map = plugins2.read();
@@ -445,7 +561,9 @@ impl PluginManager {
                 *e.state.lock() = "restarting".into();
                 (e.enabled, e.bridge.clone())
             };
-            if !should_restart { return; }
+            if !should_restart {
+                return;
+            }
             match policy.next_delay() {
                 Some(delay) => {
                     log::warn!("插件 {id3} 崩溃，{}ms 后重启", delay.as_millis());
@@ -469,30 +587,38 @@ impl PluginManager {
     pub fn stop_plugin(&self, id: &str) -> anyhow::Result<()> {
         let (port, worker_handle) = {
             let map = self.plugins.read();
-            let e = map.get(id).ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
+            let e = map
+                .get(id)
+                .ok_or_else(|| anyhow::anyhow!("插件不存在: {id}"))?;
             let w = e.worker.read().clone();
             (w.as_ref().map(|w| w.port), w)
         };
         if let Some(port) = port {
             let _ = self.runtime.block_on(async {
                 let res: anyhow::Result<()> = async {
-                    let ch = tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
-                        .map_err(|e| anyhow::anyhow!("{e}"))?
-                        .connect_timeout(Duration::from_secs(3))
-                        .connect()
+                    let ch =
+                        tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
+                            .map_err(|e| anyhow::anyhow!("{e}"))?
+                            .connect_timeout(Duration::from_secs(3))
+                            .connect()
+                            .await
+                            .map_err(|e| anyhow::anyhow!("{e}"))?;
+                    VoicePluginClient::new(ch)
+                        .shutdown(Empty {})
                         .await
                         .map_err(|e| anyhow::anyhow!("{e}"))?;
-                    VoicePluginClient::new(ch).shutdown(Empty {}).await
-                        .map_err(|e| anyhow::anyhow!("{e}"))?;
                     Ok(())
-                }.await;
+                }
+                .await;
                 res
             });
         }
         if let Some(w) = worker_handle {
             // 给优雅停止 3 秒
             for _ in 0..30 {
-                if w.try_wait_exited() { break; }
+                if w.try_wait_exited() {
+                    break;
+                }
                 std::thread::sleep(Duration::from_millis(100));
             }
             w.kill();
@@ -508,7 +634,9 @@ impl PluginManager {
 
     pub fn stop_all(&self) {
         let ids: Vec<String> = self.plugins.read().keys().cloned().collect();
-        for id in ids { self.stop_plugin(&id).ok(); }
+        for id in ids {
+            self.stop_plugin(&id).ok();
+        }
     }
 
     pub fn bridge_for(&self, id: &str) -> Option<Arc<crate::bridge::PluginBridgeImpl>> {
@@ -519,16 +647,26 @@ impl PluginManager {
         let mut map = self.plugins.write();
         let e = map.get_mut(id)?;
         if e.bridge.is_none() {
-            e.bridge = Some(Arc::new(crate::bridge::PluginBridgeImpl::new(id.to_string())));
+            e.bridge = Some(Arc::new(crate::bridge::PluginBridgeImpl::new(
+                id.to_string(),
+            )));
         }
         e.bridge.clone()
     }
 
     pub fn plugin_logs(&self, id: &str, last_n: usize) -> Vec<String> {
-        self.plugins.read().get(id)
+        self.plugins
+            .read()
+            .get(id)
             .map(|e| {
-                e.logs.lock().iter().rev().take(last_n)
-                    .rev().cloned().collect::<Vec<_>>()
+                e.logs
+                    .lock()
+                    .iter()
+                    .rev()
+                    .take(last_n)
+                    .rev()
+                    .cloned()
+                    .collect::<Vec<_>>()
             })
             .unwrap_or_default()
     }
@@ -538,46 +676,51 @@ impl PluginManager {
         let map = self.plugins.read();
         let e = map.get(id)?;
         let nts = e.node_types.lock();
-        let manifest_nt: std::collections::HashMap<String, &crate::manifest::NodeTypeDef> =
-            e.manifest.node_types.iter().map(|n| (n.node_type.clone(), n)).collect();
+        let manifest_nt: std::collections::HashMap<String, &crate::manifest::NodeTypeDef> = e
+            .manifest
+            .node_types
+            .iter()
+            .map(|n| (n.node_type.clone(), n))
+            .collect();
         let mut out = Vec::new();
         for nt in nts.iter() {
-            let (ins, outs, schema, defaults, vram) =
-                if let Some(m) = manifest_nt.get(&nt.node_type) {
-                    let conv = |p: &crate::manifest::PortDef| voice_pipeline_core::graph::PortSpec {
+            let (ins, outs, schema, defaults, vram) = if let Some(m) =
+                manifest_nt.get(&nt.node_type)
+            {
+                let conv = |p: &crate::manifest::PortDef| voice_pipeline_core::graph::PortSpec {
+                    name: p.name.clone(),
+                    port_type: voice_pipeline_core::types::PortType::parse(&p.port_type)
+                        .unwrap_or(voice_pipeline_core::types::PortType::AudioPcm),
+                    required: p.required,
+                    sample_rate: p.sample_rate,
+                    channels: p.channels,
+                };
+                (
+                    m.inputs.iter().map(conv).collect::<Vec<_>>(),
+                    m.outputs.iter().map(conv).collect::<Vec<_>>(),
+                    serde_json::from_str::<serde_json::Value>(&m.params_schema_json).ok(),
+                    serde_json::from_str::<serde_json::Value>(&m.default_params_json).ok(),
+                    m.estimated_vram_mb,
+                )
+            } else {
+                let conv = |p: &voice_plugin_protocol::voice_plugin::v1::PortDescriptor| {
+                    voice_pipeline_core::graph::PortSpec {
                         name: p.name.clone(),
                         port_type: voice_pipeline_core::types::PortType::parse(&p.port_type)
                             .unwrap_or(voice_pipeline_core::types::PortType::AudioPcm),
                         required: p.required,
                         sample_rate: p.sample_rate,
-                        channels: p.channels,
-                    };
-                    (
-                        m.inputs.iter().map(conv).collect::<Vec<_>>(),
-                        m.outputs.iter().map(conv).collect::<Vec<_>>(),
-                        serde_json::from_str::<serde_json::Value>(&m.params_schema_json).ok(),
-                        serde_json::from_str::<serde_json::Value>(&m.default_params_json).ok(),
-                        m.estimated_vram_mb,
-                    )
-                } else {
-                    let conv = |p: &voice_plugin_protocol::voice_plugin::v1::PortDescriptor| {
-                        voice_pipeline_core::graph::PortSpec {
-                            name: p.name.clone(),
-                            port_type: voice_pipeline_core::types::PortType::parse(&p.port_type)
-                                .unwrap_or(voice_pipeline_core::types::PortType::AudioPcm),
-                            required: p.required,
-                            sample_rate: p.sample_rate,
-                            channels: p.channels as u16,
-                        }
-                    };
-                    (
-                        nt.inputs.iter().map(conv).collect::<Vec<_>>(),
-                        nt.outputs.iter().map(conv).collect::<Vec<_>>(),
-                        serde_json::from_str::<serde_json::Value>(&nt.params_schema_json).ok(),
-                        serde_json::from_str::<serde_json::Value>(&nt.default_params_json).ok(),
-                        nt.estimated_vram_mb,
-                    )
+                        channels: p.channels as u16,
+                    }
                 };
+                (
+                    nt.inputs.iter().map(conv).collect::<Vec<_>>(),
+                    nt.outputs.iter().map(conv).collect::<Vec<_>>(),
+                    serde_json::from_str::<serde_json::Value>(&nt.params_schema_json).ok(),
+                    serde_json::from_str::<serde_json::Value>(&nt.default_params_json).ok(),
+                    nt.estimated_vram_mb,
+                )
+            };
             out.push(voice_pipeline_core::graph::NodeSpec {
                 node_type: format!("{}/{}", e.manifest.id, nt.node_type),
                 display_name: nt.display_name.clone(),
@@ -594,40 +737,61 @@ impl PluginManager {
 
     /// GUI 用状态快照。
     pub fn list_status(&self) -> Vec<PluginStatus> {
-        self.plugins.read().values().map(|e| {
-            let state = e.state.lock().clone();
-            let (pid, port) = e.worker.read().as_ref()
-                .map(|w| (Some(w.pid), Some(w.port))).unwrap_or((None, None));
-            PluginStatus {
-                id: e.manifest.id.clone(),
-                name: e.manifest.name.clone(),
-                version: e.manifest.version.clone(),
-                runtime: e.manifest.runtime.clone(),
-                enabled: e.enabled,
-                state,
-                detail: e.detail.lock().clone(),
-                pid,
-                port,
-                permissions: e.manifest.permissions.clone(),
-                node_types: e.node_types.lock().iter().map(|t| t.node_type.clone()).collect(),
-                models: e.manifest.models.iter().map(|m| m.model_id.clone()).collect(),
-                crash_count: 0,
-                restarts: e.restarts.load(Ordering::Relaxed),
-                python_env: if e.manifest.runtime_requirements.python_env.is_empty() {
-                    "main".into()
-                } else {
-                    e.manifest.runtime_requirements.python_env.clone()
-                },
-                installed_at: e.installed_at.clone(),
-                verified: e.verified,
-            }
-        }).collect()
+        self.plugins
+            .read()
+            .values()
+            .map(|e| {
+                let state = e.state.lock().clone();
+                let (pid, port) = e
+                    .worker
+                    .read()
+                    .as_ref()
+                    .map(|w| (Some(w.pid), Some(w.port)))
+                    .unwrap_or((None, None));
+                PluginStatus {
+                    id: e.manifest.id.clone(),
+                    name: e.manifest.name.clone(),
+                    version: e.manifest.version.clone(),
+                    runtime: e.manifest.runtime.clone(),
+                    enabled: e.enabled,
+                    state,
+                    detail: e.detail.lock().clone(),
+                    pid,
+                    port,
+                    permissions: e.manifest.permissions.clone(),
+                    node_types: e
+                        .node_types
+                        .lock()
+                        .iter()
+                        .map(|t| t.node_type.clone())
+                        .collect(),
+                    models: e
+                        .manifest
+                        .models
+                        .iter()
+                        .map(|m| m.model_id.clone())
+                        .collect(),
+                    crash_count: 0,
+                    restarts: e.restarts.load(Ordering::Relaxed),
+                    python_env: if e.manifest.runtime_requirements.python_env.is_empty() {
+                        "main".into()
+                    } else {
+                        e.manifest.runtime_requirements.python_env.clone()
+                    },
+                    installed_at: e.installed_at.clone(),
+                    verified: e.verified,
+                }
+            })
+            .collect()
     }
 }
 
 /// 供崩溃监控调用的重启（通过新 PluginManager 逻辑太重，这里复用 entry 状态）。
-fn restart_plugin(plugins: &Arc<RwLock<HashMap<String, PluginEntry>>>, id: &str,
-                  _bridge: Option<&Arc<crate::bridge::PluginBridgeImpl>>) {
+fn restart_plugin(
+    plugins: &Arc<RwLock<HashMap<String, PluginEntry>>>,
+    id: &str,
+    _bridge: Option<&Arc<crate::bridge::PluginBridgeImpl>>,
+) {
     let _ = plugins;
     let _ = id;
     // 完整重启由上层（宿主 app 层）周期调用 manager.start_plugin 完成；

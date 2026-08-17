@@ -5,7 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "FunASR paraformer-zh-streaming 流式中文 ASR + silero-vad"
-license = "MIT (模型遵循各自许可)"
+license = "Apache-2.0"
 
 permissions = ["gpu"]
 

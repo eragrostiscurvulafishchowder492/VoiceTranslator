@@ -28,7 +28,9 @@ pub fn list_devices() -> Vec<DeviceInfo> {
     if let Ok(devs) = h.input_devices() {
         for d in devs {
             let Ok(name) = d.name() else { continue };
-            let Ok(cfg) = d.default_input_config() else { continue };
+            let Ok(cfg) = d.default_input_config() else {
+                continue;
+            };
             out.push(DeviceInfo {
                 name: name.clone(),
                 is_input: true,
@@ -45,7 +47,9 @@ pub fn list_devices() -> Vec<DeviceInfo> {
     if let Ok(devs) = h.output_devices() {
         for d in devs {
             let Ok(name) = d.name() else { continue };
-            let Ok(cfg) = d.default_output_config() else { continue };
+            let Ok(cfg) = d.default_output_config() else {
+                continue;
+            };
             out.push(DeviceInfo {
                 name: name.clone(),
                 is_input: false,
@@ -65,20 +69,35 @@ pub fn list_devices() -> Vec<DeviceInfo> {
 pub fn find_by_key(key: &str) -> Option<cpal::Device> {
     let (dir, name) = key.split_once('|')?;
     let h = host();
-    let devs = if dir == "in" { h.input_devices().ok()? } else { h.output_devices().ok()? };
-    devs.into_iter().find(|d| d.name().map(|n| n == name).unwrap_or(false))
+    let devs = if dir == "in" {
+        h.input_devices().ok()?
+    } else {
+        h.output_devices().ok()?
+    };
+    devs.into_iter()
+        .find(|d| d.name().map(|n| n == name).unwrap_or(false))
 }
 
 /// VB-CABLE 检测（名称包含 CABLE Input/Output）。
 pub fn find_virtual_output() -> Option<DeviceInfo> {
-    list_devices().into_iter().find(|d| d.is_output && d.name.to_lowercase().contains("cable input"))
+    list_devices()
+        .into_iter()
+        .find(|d| d.is_output && d.name.to_lowercase().contains("cable input"))
 }
 
 /// 热插拔轮询：上一帧设备键集合 vs 当前，返回 (新增, 消失)。
 pub fn diff_devices(prev: &[String]) -> (Vec<DeviceInfo>, Vec<String>) {
     let now = list_devices();
     let now_keys: Vec<String> = now.iter().map(|d| d.key.clone()).collect();
-    let added = now.iter().filter(|d| !prev.contains(&d.key)).cloned().collect();
-    let removed = prev.iter().filter(|k| !now_keys.contains(k)).cloned().collect();
+    let added = now
+        .iter()
+        .filter(|d| !prev.contains(&d.key))
+        .cloned()
+        .collect();
+    let removed = prev
+        .iter()
+        .filter(|k| !now_keys.contains(k))
+        .cloned()
+        .collect();
     (added, removed)
 }

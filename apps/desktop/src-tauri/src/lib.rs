@@ -10,12 +10,14 @@ use tauri::{Emitter, Manager};
 pub fn run() {
     // 仓库根：从可执行文件向上找（dev: target/debug；打包: 安装目录旁）
     let repo_root = voice_common::paths::default_root()
-        .parent().map(|p| p.to_path_buf()).unwrap_or_else(|| std::path::PathBuf::from("."));
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
 
     let state = AppState::new(repo_root).expect("宿主状态初始化失败");
     presets::ensure_installed(&state.store);
 
-    let app = tauri::Builder::default()
+    tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().with_handler(|app, shortcut, event| {
             if event.state == tauri_plugin_global_shortcut::ShortcutState::Pressed {
@@ -142,5 +144,4 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("Voice Studio 启动失败");
-    let _ = app;
 }

@@ -44,15 +44,23 @@ impl AppState {
         std::thread::spawn(move || {
             for ev in rx {
                 match &ev {
-                    EngineEvent::StateChanged(s) => lr.push("INFO", "pipeline", format!("状态: {s:?}")),
-                    EngineEvent::NodeStateChanged { node, state } =>
-                        lr.push("INFO", "pipeline", format!("节点 {node}: {state:?}")),
-                    EngineEvent::Error { node, message } =>
-                        lr.push("ERROR", "pipeline", format!("错误 {node:?}: {message}")),
-                    EngineEvent::Text { kind, text } =>
-                        lr.push("INFO", "text", format!("[{kind}] {text}")),
-                    EngineEvent::AudioLevel { rms, peak } =>
-                        lr.push("DEBUG", "audio", format!("level rms={rms:.3} peak={peak:.3}")),
+                    EngineEvent::StateChanged(s) => {
+                        lr.push("INFO", "pipeline", format!("状态: {s:?}"))
+                    }
+                    EngineEvent::NodeStateChanged { node, state } => {
+                        lr.push("INFO", "pipeline", format!("节点 {node}: {state:?}"))
+                    }
+                    EngineEvent::Error { node, message } => {
+                        lr.push("ERROR", "pipeline", format!("错误 {node:?}: {message}"))
+                    }
+                    EngineEvent::Text { kind, text } => {
+                        lr.push("INFO", "text", format!("[{kind}] {text}"))
+                    }
+                    EngineEvent::AudioLevel { rms, peak } => lr.push(
+                        "DEBUG",
+                        "audio",
+                        format!("level rms={rms:.3} peak={peak:.3}"),
+                    ),
                 }
             }
         });
@@ -72,8 +80,10 @@ impl AppState {
             ptt_active: Arc::new(AtomicBool::new(true)),
             muted: Arc::new(AtomicBool::new(false)),
             startup_page: parking_lot::Mutex::new(
-                std::env::args().skip(1)
-                    .find_map(|a| a.strip_prefix("--page=").map(|s| s.to_string()))),
+                std::env::args()
+                    .skip(1)
+                    .find_map(|a| a.strip_prefix("--page=").map(|s| s.to_string())),
+            ),
         })
     }
 
@@ -87,13 +97,21 @@ impl AppState {
                 if let Some(specs) = self.plugins.node_type_specs(&st.id) {
                     // 刷新缓存
                     if let Ok(json) = serde_json::to_string(&specs) {
-                        let _ = self.store.set_setting(&format!("nodes_cache/{}", st.id), &json);
+                        let _ = self
+                            .store
+                            .set_setting(&format!("nodes_cache/{}", st.id), &json);
                     }
-                    for spec in specs { reg.register(spec); }
+                    for spec in specs {
+                        reg.register(spec);
+                    }
                 }
             } else if let Some(json) = self.store.get_setting(&format!("nodes_cache/{}", st.id)) {
-                if let Ok(specs) = serde_json::from_str::<Vec<voice_pipeline_core::graph::NodeSpec>>(&json) {
-                    for spec in specs { reg.register(spec); }
+                if let Ok(specs) =
+                    serde_json::from_str::<Vec<voice_pipeline_core::graph::NodeSpec>>(&json)
+                {
+                    for spec in specs {
+                        reg.register(spec);
+                    }
                 }
             }
         }
@@ -101,7 +119,13 @@ impl AppState {
     }
 
     pub fn is_pipeline_running(&self) -> bool {
-        self.engine.lock().as_ref().map(|e| e.state() == voice_pipeline_core::types::PipelineState::Running
-            || e.state() == voice_pipeline_core::types::PipelineState::Starting).unwrap_or(false)
+        self.engine
+            .lock()
+            .as_ref()
+            .map(|e| {
+                e.state() == voice_pipeline_core::types::PipelineState::Running
+                    || e.state() == voice_pipeline_core::types::PipelineState::Starting
+            })
+            .unwrap_or(false)
     }
 }

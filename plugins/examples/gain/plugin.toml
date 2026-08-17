@@ -6,7 +6,7 @@ runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "示例插件：可调增益（dB）的音频节点"
 author = "Voice Studio Examples"
-license = "MIT"
+license = "Apache-2.0"
 # 本插件不申请任何权限（网络默认关闭）
 
 [runtime_requirements]

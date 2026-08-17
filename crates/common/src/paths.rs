@@ -34,24 +34,59 @@ impl AppPaths {
         Self { root: root.into() }
     }
 
-    pub fn database(&self) -> PathBuf { self.root.join("database") }
-    pub fn db_file(&self) -> PathBuf { self.database().join("voice_studio.db") }
-    pub fn plugins(&self) -> PathBuf { self.root.join("plugins") }
-    pub fn runtimes(&self) -> PathBuf { self.root.join("runtimes") }
-    pub fn plugin_envs(&self) -> PathBuf { self.runtimes().join("plugin-envs") }
-    pub fn models(&self) -> PathBuf { self.root.join("models") }
-    pub fn references(&self) -> PathBuf { self.root.join("references") }
-    pub fn pipelines(&self) -> PathBuf { self.root.join("pipelines") }
-    pub fn presets(&self) -> PathBuf { self.root.join("presets") }
-    pub fn logs(&self) -> PathBuf { self.root.join("logs") }
-    pub fn cache(&self) -> PathBuf { self.root.join("cache") }
-    pub fn temp(&self) -> PathBuf { self.root.join("temp") }
-    pub fn crash_reports(&self) -> PathBuf { self.logs().join("crash") }
+    pub fn database(&self) -> PathBuf {
+        self.root.join("database")
+    }
+    pub fn db_file(&self) -> PathBuf {
+        self.database().join("voice_studio.db")
+    }
+    pub fn plugins(&self) -> PathBuf {
+        self.root.join("plugins")
+    }
+    pub fn runtimes(&self) -> PathBuf {
+        self.root.join("runtimes")
+    }
+    pub fn plugin_envs(&self) -> PathBuf {
+        self.runtimes().join("plugin-envs")
+    }
+    pub fn models(&self) -> PathBuf {
+        self.root.join("models")
+    }
+    pub fn references(&self) -> PathBuf {
+        self.root.join("references")
+    }
+    pub fn pipelines(&self) -> PathBuf {
+        self.root.join("pipelines")
+    }
+    pub fn presets(&self) -> PathBuf {
+        self.root.join("presets")
+    }
+    pub fn logs(&self) -> PathBuf {
+        self.root.join("logs")
+    }
+    pub fn cache(&self) -> PathBuf {
+        self.root.join("cache")
+    }
+    pub fn temp(&self) -> PathBuf {
+        self.root.join("temp")
+    }
+    pub fn crash_reports(&self) -> PathBuf {
+        self.logs().join("crash")
+    }
 
     pub fn ensure_all(&self) -> std::io::Result<()> {
-        for d in [self.database(), self.plugins(), self.runtimes(), self.models(),
-                  self.references(), self.pipelines(), self.presets(), self.logs(),
-                  self.cache(), self.temp()] {
+        for d in [
+            self.database(),
+            self.plugins(),
+            self.runtimes(),
+            self.models(),
+            self.references(),
+            self.pipelines(),
+            self.presets(),
+            self.logs(),
+            self.cache(),
+            self.temp(),
+        ] {
             std::fs::create_dir_all(d)?;
         }
         Ok(())

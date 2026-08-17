@@ -5,7 +5,9 @@ use serde_json::json;
 
 fn repo_root() -> std::path::PathBuf {
     let mut d = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    for _ in 0..4 { d.pop(); }
+    for _ in 0..4 {
+        d.pop();
+    }
     d
 }
 
@@ -24,14 +26,17 @@ fn native_pipeline_end_to_end_via_commands() {
 
     // 2) 节点注册表：内置节点齐全
     let builtin_count = state.registry.read().all().len();
-    assert!(builtin_count >= 15, "内置节点 ≥15（12.1），实际 {builtin_count}");
+    assert!(
+        builtin_count >= 15,
+        "内置节点 ≥15（12.1），实际 {builtin_count}"
+    );
 
     // 3) 造测试 WAV（1 秒 440Hz）
     let wav = data_dir.join("in.wav");
     let sr = 48000u32;
-    let samples: Vec<f32> = (0..sr).map(|i| {
-        0.3 * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / sr as f32).sin()
-    }).collect();
+    let samples: Vec<f32> = (0..sr)
+        .map(|i| 0.3 * (2.0 * std::f32::consts::PI * 440.0 * i as f32 / sr as f32).sin())
+        .collect();
     voice_audio_engine::wav::write_wav(&wav, &samples, sr).unwrap();
 
     // 4) 管线：file → gain(+6dB) → recorder
@@ -50,16 +55,22 @@ fn native_pipeline_end_to_end_via_commands() {
             {"id": "e1", "from_node": "f", "from_port": "out", "to_node": "g", "to_port": "in"},
             {"id": "e2", "from_node": "g", "from_port": "out", "to_node": "r", "to_port": "in"},
         ],
-    }).to_string();
+    })
+    .to_string();
 
     // 5) 校验通过（无 Error）
     {
         let reg = state.registry.read();
         let ext = voice_pipeline_core::validate::ExternalChecks::default();
         let issues = voice_pipeline_core::validate::validate(
-            &serde_json::from_str(&graph).unwrap(), &reg, &ext);
-        let errs: Vec<_> = issues.iter()
-            .filter(|i| i.level == voice_pipeline_core::validate::Severity::Error).collect();
+            &serde_json::from_str(&graph).unwrap(),
+            &reg,
+            &ext,
+        );
+        let errs: Vec<_> = issues
+            .iter()
+            .filter(|i| i.level == voice_pipeline_core::validate::Severity::Error)
+            .collect();
         assert!(errs.is_empty(), "校验错误: {errs:?}");
     }
 
@@ -73,8 +84,8 @@ fn native_pipeline_end_to_end_via_commands() {
     });
     let (tx, _rx) = crossbeam_channel::bounded(1024);
     let g: voice_pipeline_core::graph::PipelineGraph = serde_json::from_str(&graph).unwrap();
-    let mut engine = voice_pipeline_core::runtime::ExecutionEngine::new(
-        g, bridge, Default::default(), tx);
+    let mut engine =
+        voice_pipeline_core::runtime::ExecutionEngine::new(g, bridge, Default::default(), tx);
     {
         let reg = state.registry.read();
         engine.start(&reg).expect("管线启动");
@@ -91,12 +102,20 @@ fn native_pipeline_end_to_end_via_commands() {
     assert!(!out_samples.is_empty(), "输出为空");
     let peak_in = samples.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
     let peak_out = out_samples.iter().map(|s| s.abs()).fold(0.0f32, f32::max);
-    assert!(peak_out > peak_in * 1.4, "+6dB 未生效: {peak_in} → {peak_out}");
-    println!("[host-it] {peak_in:.3} → {peak_out:.3} (+6dB), {} 样本", out_samples.len());
+    assert!(
+        peak_out > peak_in * 1.4,
+        "+6dB 未生效: {peak_in} → {peak_out}"
+    );
+    println!(
+        "[host-it] {peak_in:.3} → {peak_out:.3} (+6dB), {} 样本",
+        out_samples.len()
+    );
 
     // 8) 崩溃标记语义
     voice_diagnostics::mark_clean_exit(&data_dir.join("logs"));
-    assert!(!voice_diagnostics::was_abnormal_exit(&data_dir.join("logs")));
+    assert!(!voice_diagnostics::was_abnormal_exit(
+        &data_dir.join("logs")
+    ));
     let _ = AtomicBool::new(false);
     let _ = Ordering::Relaxed;
     println!("[host-it] PASS");

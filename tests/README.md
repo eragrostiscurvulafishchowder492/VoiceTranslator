@@ -8,7 +8,8 @@
 | `smoke_ai_pipeline.py` | 真实 AI 管线（textkit 断句 + CosyVoice TTS 经 gRPC） | 同上 + models/CosyVoice3-0.5B |
 | `simulate.py [分钟]` | 全链路长稳 soak（TTS→ASR 回灌相似度/显存/漂移） | 同上 + 参考音频 |
 
-Rust 侧测试在各 crate 的 `tests/` 与 `src`（`cargo test --workspace`）。
+Rust 侧测试在各 crate 的 `tests/` 与 `src`。贡献者应使用 `scripts/test.ps1 -SkipAi`；
+该入口以 `--locked` 分别运行非桌面 workspace tests 与完整 desktop tests。
 
 ## 调参探测脚本（probe_*.py / tts_*.py）
 
@@ -19,4 +20,7 @@ Rust 侧测试在各 crate 的 `tests/` 与 `src`（`cargo test --workspace`）�
 
 ## 隐私
 
-任何测试音频/参考音频不入库（.gitignore 排除 data/references/ 与 *.wav）。
+用户自备测试输入不入库。`.gitignore` 明确排除 `data/references/`，并排除 `data/`
+根目录下常见的用户音频格式（`.wav`、`.flac`、`.mp3`、`.m4a`、`.ogg`、`.opus`、
+`.aac`、`.wma`）；这不是仓库全局的 `*.wav` 规则。`data/test_zh.wav` 是本地测试输入，
+不得提交。

@@ -5,6 +5,7 @@ api_version = "1.0"
 runtime = "python"
 entrypoint = "plugin_impl:create_plugin"
 description = "稳定前缀 / 智能断句 / 文本标准化 / text→tts.request 转换"
+license = "Apache-2.0"
 
 [runtime_requirements]
 python_env = "main"

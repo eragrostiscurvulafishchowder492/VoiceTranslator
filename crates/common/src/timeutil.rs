@@ -2,7 +2,10 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn now_ns() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as i64).unwrap_or(0)
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos() as i64)
+        .unwrap_or(0)
 }
 
 pub fn now_ms() -> i64 {
@@ -10,5 +13,7 @@ pub fn now_ms() -> i64 {
 }
 
 pub fn iso_now() -> String {
-    chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3f").to_string()
+    chrono::Local::now()
+        .format("%Y-%m-%dT%H:%M:%S%.3f")
+        .to_string()
 }

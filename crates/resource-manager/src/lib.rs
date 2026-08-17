@@ -20,8 +20,13 @@ pub struct ResourceManager {
 impl ResourceManager {
     pub fn new() -> Self {
         let nvml = nvml_wrapper::Nvml::init().ok();
-        if nvml.is_none() { log::warn!("NVML 不可用（无 NVIDIA GPU 或驱动问题）"); }
-        Self { nvml, sys: parking_lot::Mutex::new(sysinfo::System::new()) }
+        if nvml.is_none() {
+            log::warn!("NVML 不可用（无 NVIDIA GPU 或驱动问题）");
+        }
+        Self {
+            nvml,
+            sys: parking_lot::Mutex::new(sysinfo::System::new()),
+        }
     }
 
     pub fn snapshot(&self) -> ResourceSnapshot {
@@ -45,8 +50,14 @@ impl ResourceManager {
             if let Ok(dev) = nvml.device_by_index(0) {
                 let name = dev.name().map(|s| s.trim().to_string()).unwrap_or_default();
                 let mem = dev.memory_info().ok();
-                let total = mem.as_ref().map(|m| (m.total / 1_048_576) as u32).unwrap_or(0);
-                let used = mem.as_ref().map(|m| (m.used / 1_048_576) as u32).unwrap_or(0);
+                let total = mem
+                    .as_ref()
+                    .map(|m| (m.total / 1_048_576) as u32)
+                    .unwrap_or(0);
+                let used = mem
+                    .as_ref()
+                    .map(|m| (m.used / 1_048_576) as u32)
+                    .unwrap_or(0);
                 return (name, total, used);
             }
         }
@@ -63,12 +74,15 @@ impl ResourceManager {
         if estimated_vram_mb > avail {
             return Err(format!(
                 "显存预检失败：需要 {}MB，可用 {}MB（可尝试 asr_cpu 模式或卸载其他模型）",
-                estimated_vram_mb, avail));
+                estimated_vram_mb, avail
+            ));
         }
         Ok(())
     }
 }
 
 impl Default for ResourceManager {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }

@@ -2,8 +2,15 @@
 
 /// 单极点→双二阶高通（80Hz 默认）。
 pub struct HighPass {
-    b0: f32, b1: f32, b2: f32, a1: f32, a2: f32,
-    x1: f32, x2: f32, y1: f32, y2: f32,
+    b0: f32,
+    b1: f32,
+    b2: f32,
+    a1: f32,
+    a2: f32,
+    x1: f32,
+    x2: f32,
+    y1: f32,
+    y2: f32,
 }
 
 impl HighPass {
@@ -13,54 +20,95 @@ impl HighPass {
         let al = s / (2.0 * 0.707);
         let a0 = 1.0 + al;
         Self {
-            b0: ((1.0 + c) / 2.0) / a0, b1: (-(1.0 + c)) / a0, b2: ((1.0 + c) / 2.0) / a0,
-            a1: (-2.0 * c) / a0, a2: (1.0 - al) / a0,
-            x1: 0.0, x2: 0.0, y1: 0.0, y2: 0.0,
+            b0: ((1.0 + c) / 2.0) / a0,
+            b1: (-(1.0 + c)) / a0,
+            b2: ((1.0 + c) / 2.0) / a0,
+            a1: (-2.0 * c) / a0,
+            a2: (1.0 - al) / a0,
+            x1: 0.0,
+            x2: 0.0,
+            y1: 0.0,
+            y2: 0.0,
         }
     }
 
     pub fn process(&mut self, x: f32) -> f32 {
-        let y = self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2 - self.a1 * self.y1 - self.a2 * self.y2;
-        self.x2 = self.x1; self.x1 = x; self.y2 = self.y1; self.y1 = y;
+        let y = self.b0 * x + self.b1 * self.x1 + self.b2 * self.x2
+            - self.a1 * self.y1
+            - self.a2 * self.y2;
+        self.x2 = self.x1;
+        self.x1 = x;
+        self.y2 = self.y1;
+        self.y1 = y;
         y
     }
 }
 
 /// 噪声门（RMS 包络，attack/release 毫秒）。
 pub struct NoiseGate {
-    threshold: f32, attack: f32, release: f32,
-    env: f32, gain: f32, opened: bool, hold_ms: f32, held_ms: f32,
+    threshold: f32,
+    attack: f32,
+    release: f32,
+    env: f32,
+    gain: f32,
+    opened: bool,
+    hold_ms: f32,
+    held_ms: f32,
 }
 
 impl NoiseGate {
-    pub fn new(threshold_db: f32, attack_ms: f32, release_ms: f32, rate: f32, hold_ms: f32) -> Self {
+    pub fn new(
+        threshold_db: f32,
+        attack_ms: f32,
+        release_ms: f32,
+        rate: f32,
+        hold_ms: f32,
+    ) -> Self {
         Self {
             threshold: 10f32.powf(threshold_db / 20.0),
             attack: (-1.0 / (attack_ms / 1000.0 * rate)).exp(),
             release: (-1.0 / (release_ms / 1000.0 * rate)).exp(),
-            env: 0.0, gain: 1.0, opened: false, held_ms: 0.0, hold_ms,
+            env: 0.0,
+            gain: 1.0,
+            opened: false,
+            held_ms: 0.0,
+            hold_ms,
         }
     }
 
     pub fn process(&mut self, x: f32) -> f32 {
         let abs = x.abs();
-        self.env = if abs > self.env { abs } else { abs + self.release * (self.env - abs) };
+        self.env = if abs > self.env {
+            abs
+        } else {
+            abs + self.release * (self.env - abs)
+        };
         if self.env > self.threshold {
             self.opened = true;
             self.held_ms = 0.0;
         } else if self.opened {
             self.held_ms += 1000.0 / 48_000.0;
-            if self.held_ms > self.hold_ms { self.opened = false; }
+            if self.held_ms > self.hold_ms {
+                self.opened = false;
+            }
         }
         let target = if self.opened { 1.0 } else { 0.0 };
-        let coef = if target > self.gain { self.attack } else { self.release };
+        let coef = if target > self.gain {
+            self.attack
+        } else {
+            self.release
+        };
         self.gain = target + (self.gain - target) * coef;
         x * self.gain
     }
 }
 
 /// 峰值限幅器（软饱和 + 包络跟随，无 lookahead）。
-pub struct Limiter { ceiling: f32, env: f32, coef: f32 }
+pub struct Limiter {
+    ceiling: f32,
+    env: f32,
+    coef: f32,
+}
 
 impl Limiter {
     pub fn new(ceiling_db: f32, release_ms: f32, rate: f32) -> Self {
@@ -87,7 +135,10 @@ impl Limiter {
 
 /// 前置链：HPF → Gate → Limiter → Gain（与 Python 侧 dsp 语义一致）。
 pub struct PreChain {
-    hp: HighPass, gate: NoiseGate, lim: Limiter, gain: f32,
+    hp: HighPass,
+    gate: NoiseGate,
+    lim: Limiter,
+    gain: f32,
 }
 
 impl PreChain {
@@ -107,12 +158,20 @@ impl PreChain {
 
 /// 峰值电平（RMS + peak）。
 #[derive(Default, Clone, Copy)]
-pub struct LevelMeter { pub rms: f32, pub peak: f32 }
+pub struct LevelMeter {
+    pub rms: f32,
+    pub peak: f32,
+}
 
 pub fn measure(buf: &[f32]) -> LevelMeter {
-    if buf.is_empty() { return LevelMeter::default(); }
+    if buf.is_empty() {
+        return LevelMeter::default();
+    }
     let sum: f32 = buf.iter().map(|s| s * s).sum();
-    LevelMeter { rms: (sum / buf.len() as f32).sqrt(), peak: buf.iter().map(|s| s.abs()).fold(0.0, f32::max) }
+    LevelMeter {
+        rms: (sum / buf.len() as f32).sqrt(),
+        peak: buf.iter().map(|s| s.abs()).fold(0.0, f32::max),
+    }
 }
 
 /// 每 chunk 间 5ms crossfade 拼接，防 click。
@@ -122,10 +181,10 @@ pub fn crossfade_append(dst: &mut Vec<f32>, chunk: &[f32], fade_n: usize) {
         return;
     }
     let n = fade_n.min(dst.len()).min(chunk.len());
-    for i in 0..n {
+    for (i, &sample) in chunk.iter().take(n).enumerate() {
         let a = dst.len() - n + i;
         let t = (i + 1) as f32 / (n + 1) as f32;
-        dst[a] = dst[a] * (1.0 - t) + chunk[i] * t;
+        dst[a] = dst[a] * (1.0 - t) + sample * t;
     }
     dst.extend_from_slice(&chunk[n..]);
 }

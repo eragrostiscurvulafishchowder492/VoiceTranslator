@@ -8,7 +8,7 @@ const text = ref("你们先过去，我拿一下东西，马上回来。");
 const plugins = ref<any[]>([]);
 const aPlugin = ref("org.voicestudio.cosyvoice");
 const bPlugin = ref("org.voicestudio.cosyvoice");
-const results = ref<any[]>({});
+const results = ref<Record<string, any>>({});
 const busy = ref<string | null>(null);
 const devices = ref<any[]>([]);
 

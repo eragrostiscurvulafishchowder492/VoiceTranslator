@@ -18,7 +18,7 @@ pub struct PluginManifest {
     #[serde(default)]
     pub license: String,
     #[serde(default)]
-    pub supported_os: Vec<String>,   // 空 = 全部
+    pub supported_os: Vec<String>, // 空 = 全部
     #[serde(default)]
     pub supported_arch: Vec<String>,
     #[serde(default)]
@@ -28,7 +28,7 @@ pub struct PluginManifest {
     #[serde(default)]
     pub capabilities: Vec<String>,
     #[serde(default)]
-    pub permissions: Vec<String>,    // microphone / audio_output / filesystem_read / ...
+    pub permissions: Vec<String>, // microphone / audio_output / filesystem_read / ...
     #[serde(default)]
     pub node_types: Vec<NodeTypeDef>,
     #[serde(default)]
@@ -41,7 +41,9 @@ pub struct PluginManifest {
     pub network: Option<bool>,
 }
 
-fn default_healthcheck_s() -> u64 { 5 }
+fn default_healthcheck_s() -> u64 {
+    5
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct NodeTypeDef {
@@ -108,8 +110,15 @@ pub struct RuntimeRequirements {
 
 /// 已知的合法权限集合（10.3）。
 pub const KNOWN_PERMISSIONS: &[&str] = &[
-    "microphone", "audio_output", "filesystem_read", "filesystem_write",
-    "network", "gpu", "process_spawn", "clipboard", "global_hotkey",
+    "microphone",
+    "audio_output",
+    "filesystem_read",
+    "filesystem_write",
+    "network",
+    "gpu",
+    "process_spawn",
+    "clipboard",
+    "global_hotkey",
 ];
 
 impl PluginManifest {
@@ -120,7 +129,10 @@ impl PluginManifest {
     }
 
     pub fn validate(&self) -> anyhow::Result<()> {
-        anyhow::ensure!(!self.id.is_empty() && self.id.contains('.'), "插件 id 必须是反向域名形式");
+        anyhow::ensure!(
+            !self.id.is_empty() && self.id.contains('.'),
+            "插件 id 必须是反向域名形式"
+        );
         anyhow::ensure!(!self.name.is_empty(), "缺少 name");
         anyhow::ensure!(!self.version.is_empty(), "缺少 version");
         anyhow::ensure!(!self.api_version.is_empty(), "缺少 api_version");
@@ -150,7 +162,9 @@ pub fn load_manifest(dir: &std::path::Path) -> anyhow::Result<PluginManifest> {
 /// 校验插件包完整性（checksums.json：{"relpath": "sha256", ...}）。
 pub fn verify_checksums(plugin_dir: &std::path::Path) -> anyhow::Result<Vec<String>> {
     let cs_path = plugin_dir.join("checksums.json");
-    if !cs_path.exists() { return Ok(vec![]); }
+    if !cs_path.exists() {
+        return Ok(vec![]);
+    }
     let map: std::collections::HashMap<String, String> =
         serde_json::from_str(&std::fs::read_to_string(&cs_path)?)?;
     let mut problems = Vec::new();
@@ -167,7 +181,9 @@ pub fn verify_checksums(plugin_dir: &std::path::Path) -> anyhow::Result<Vec<Stri
         let mut buf = [0u8; 65536];
         loop {
             let n = f.read(&mut buf)?;
-            if n == 0 { break; }
+            if n == 0 {
+                break;
+            }
             hasher.update(&buf[..n]);
         }
         let got = hex::encode(hasher.finalize());

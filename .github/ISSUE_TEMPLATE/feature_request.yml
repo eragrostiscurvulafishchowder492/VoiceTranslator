@@ -1,0 +1,52 @@
+name: Feature request
+description: Propose a focused product or developer-experience improvement
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the user problem before proposing an implementation. Model, driver, and third-party service requests must include their licensing, privacy, and platform implications.
+  - type: dropdown
+    id: audience
+    attributes:
+      label: Primary audience
+      options:
+        - Voice Studio user
+        - Plugin developer
+        - Project contributor
+        - Distributor or integrator
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What workflow is difficult or impossible today, and who experiences it?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable behavior and acceptance criteria, not only a technical solution.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include existing presets, plugins, or external tools that partly address the need.
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Platform, model, privacy, or license constraints
+      description: Identify Windows/audio-driver requirements, model downloads, network access, redistribution terms, or hardware dependencies.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and documentation for this request.
+          required: true
+        - label: I have not included private data, credentials, or proprietary assets.
+          required: true

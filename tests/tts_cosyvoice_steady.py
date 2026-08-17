@@ -29,7 +29,8 @@ def main():
     eng.load_reference(str(wav), ref_text)
     style = TTSStyle(speed=1.0, emotion="calm")
 
-    out_dir = Path(r"D:\_agents\VoiceTranslator\logs")
+    out_dir = ROOT / "logs"
+    out_dir.mkdir(parents=True, exist_ok=True)
     for i, text in enumerate(SENTS):
         t0 = time.perf_counter()
         eng.ttfa_ms = 0

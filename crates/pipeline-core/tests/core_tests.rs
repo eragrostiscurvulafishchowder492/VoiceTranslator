@@ -5,15 +5,28 @@ use voice_pipeline_core::types::{Backpressure, Payload, PortType};
 use voice_pipeline_core::validate::{validate, ExternalChecks, Severity};
 
 fn n(id: &str, ty: &str) -> NodeInstance {
-    NodeInstance { id: id.into(), node_type: ty.into(), label: id.into(),
-                   params: serde_json::json!({}), position: (0.0, 0.0),
-                   bypassed: false, notes: String::new(), group: String::new() }
+    NodeInstance {
+        id: id.into(),
+        node_type: ty.into(),
+        label: id.into(),
+        params: serde_json::json!({}),
+        position: (0.0, 0.0),
+        bypassed: false,
+        notes: String::new(),
+        group: String::new(),
+    }
 }
 
 fn e(a: &str, ap: &str, b: &str, bp: &str) -> Edge {
-    Edge { id: format!("e{a}{b}"), from_node: a.into(), from_port: ap.into(),
-           to_node: b.into(), to_port: bp.into(),
-           backpressure: Backpressure::Block, capacity: 4 }
+    Edge {
+        id: format!("e{a}{b}"),
+        from_node: a.into(),
+        from_port: ap.into(),
+        to_node: b.into(),
+        to_port: bp.into(),
+        backpressure: Backpressure::Block,
+        capacity: 4,
+    }
 }
 
 #[test]
@@ -46,7 +59,10 @@ fn validate_type_mismatch() {
     g.edges.push(e("t", "out", "o", "in")); // text.segment → audio.pcm
     let reg = builtin_registry();
     let issues = validate(&g, &reg, &ExternalChecks::default());
-    assert!(issues.iter().any(|i| i.code == "TYPE_MISMATCH"), "应检出类型不匹配: {issues:?}");
+    assert!(
+        issues.iter().any(|i| i.code == "TYPE_MISMATCH"),
+        "应检出类型不匹配: {issues:?}"
+    );
 }
 
 #[test]
@@ -60,7 +76,10 @@ fn validate_cycle_detection() {
     g.edges.push(e("g3", "out", "g1", "in"));
     let reg = builtin_registry();
     let issues = validate(&g, &reg, &ExternalChecks::default());
-    assert!(issues.iter().any(|i| i.code == "CYCLE"), "应检出循环: {issues:?}");
+    assert!(
+        issues.iter().any(|i| i.code == "CYCLE"),
+        "应检出循环: {issues:?}"
+    );
 }
 
 #[test]
@@ -69,19 +88,31 @@ fn validate_required_input() {
     g.nodes.push(n("o", "audio.speaker_output")); // 必需输入未连
     let reg = builtin_registry();
     let issues = validate(&g, &reg, &ExternalChecks::default());
-    assert!(issues.iter().any(|i| i.code == "REQUIRED_INPUT" && i.level == Severity::Error));
+    assert!(issues
+        .iter()
+        .any(|i| i.code == "REQUIRED_INPUT" && i.level == Severity::Error));
 }
 
 #[test]
 fn validate_missing_plugin() {
     let mut g = PipelineGraph::new("缺插件");
-    g.nodes.push(NodeInstance { id: "x".into(),
-        node_type: "org.nothing.missing/some.node".into(), label: "x".into(),
-        params: serde_json::json!({}), position: (0.0, 0.0),
-        bypassed: false, notes: String::new(), group: String::new() });
+    g.nodes.push(NodeInstance {
+        id: "x".into(),
+        node_type: "org.nothing.missing/some.node".into(),
+        label: "x".into(),
+        params: serde_json::json!({}),
+        position: (0.0, 0.0),
+        bypassed: false,
+        notes: String::new(),
+        group: String::new(),
+    });
     let reg = builtin_registry();
-    let ext = ExternalChecks { is_plugin_installed: Box::new(|_| false),
-        has_model: Box::new(|_, _| false), total_vram_mb: 0, used_vram_mb: 0 };
+    let ext = ExternalChecks {
+        is_plugin_installed: Box::new(|_| false),
+        has_model: Box::new(|_, _| false),
+        total_vram_mb: 0,
+        used_vram_mb: 0,
+    };
     let issues = validate(&g, &reg, &ext);
     assert!(issues.iter().any(|i| i.code == "PLUGIN_MISSING"));
 }
@@ -91,8 +122,12 @@ fn validate_vram_preflight() {
     let mut g = PipelineGraph::new("显存预检");
     g.nodes.push(n("m", "audio.microphone"));
     let reg = builtin_registry();
-    let ext = ExternalChecks { is_plugin_installed: Box::new(|_| true),
-        has_model: Box::new(|_, _| true), total_vram_mb: 8188, used_vram_mb: 6000 };
+    let ext = ExternalChecks {
+        is_plugin_installed: Box::new(|_| true),
+        has_model: Box::new(|_, _| true),
+        total_vram_mb: 8188,
+        used_vram_mb: 6000,
+    };
     // 内置节点 VRAM=0 不触发；仅当注册表含高 VRAM 插件节点才可能 Warning
     let issues = validate(&g, &reg, &ext);
     assert!(!issues.iter().any(|i| i.code == "VRAM_TIGHT"));
@@ -119,9 +154,14 @@ fn backpressure_parse() {
 #[test]
 fn payload_port_type() {
     let audio = Payload::Audio(voice_pipeline_core::types::AudioChunk {
-        stream_id: "s".into(), sequence: 0, timestamp_ns: 0, sample_rate: 48000,
-        channels: 1, samples: std::sync::Arc::new(vec![]),
-        end_of_stream: false, end_of_utterance: false,
+        stream_id: "s".into(),
+        sequence: 0,
+        timestamp_ns: 0,
+        sample_rate: 48000,
+        channels: 1,
+        samples: std::sync::Arc::new(vec![]),
+        end_of_stream: false,
+        end_of_utterance: false,
     });
     assert_eq!(audio.port_type(), PortType::AudioPcm);
 }

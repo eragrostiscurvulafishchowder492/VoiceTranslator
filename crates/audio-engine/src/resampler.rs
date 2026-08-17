@@ -13,7 +13,11 @@ impl StreamResampler {
     pub fn new(from: u32, to: u32, chunk_in: usize) -> anyhow::Result<Self> {
         let inner = FftFixedIn::<f32>::new(from as usize, to as usize, chunk_in, 2, 1)?;
         let in_needed = inner.input_frames_max();
-        Ok(Self { inner, in_buf: vec![Vec::with_capacity(in_needed)], in_needed })
+        Ok(Self {
+            inner,
+            in_buf: vec![Vec::with_capacity(in_needed)],
+            in_needed,
+        })
     }
 
     /// 送入任意长度输入，返回已就绪的输出（可能为空）。
@@ -21,7 +25,9 @@ impl StreamResampler {
         self.in_buf[0].extend_from_slice(input);
         let mut out = Vec::new();
         while self.in_buf[0].len() >= self.in_needed {
-            let chunk: Vec<f32> = self.in_buf[0].drain(..self.inner.input_frames_next()).collect();
+            let chunk: Vec<f32> = self.in_buf[0]
+                .drain(..self.inner.input_frames_next())
+                .collect();
             self.in_buf[0].shrink_to_fit();
             self.in_buf[0].reserve(self.in_needed);
             let processed = self.inner.process(&[chunk], None)?;
@@ -34,7 +40,7 @@ impl StreamResampler {
     pub fn flush(&mut self) -> anyhow::Result<Vec<f32>> {
         let pad = self.in_needed - self.in_buf[0].len();
         if pad > 0 && !self.in_buf[0].is_empty() {
-            self.in_buf[0].extend(std::iter::repeat(0.0).take(pad));
+            self.in_buf[0].extend(std::iter::repeat_n(0.0, pad));
         }
         let mut out = Vec::new();
         while self.in_buf[0].len() >= self.in_needed {

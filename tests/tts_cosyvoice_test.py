@@ -14,7 +14,7 @@ from app.diagnostics.gpu import query_vram_mb, query_gpu_total_used_mb
 def main():
     wav = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(r"data/test_zh.wav")
     ref_text = sys.argv[2] if len(sys.argv) > 2 else "今天天气不错，我们一起去公园散步吧。"
-    out = Path(r"D:\_agents\VoiceTranslator\logs\test_cosyvoice3.wav")
+    out = ROOT / "logs" / "test_cosyvoice3.wav"
     out.parent.mkdir(exist_ok=True)
 
     eng = CosyVoiceEngine(device="cuda", fp16=True)

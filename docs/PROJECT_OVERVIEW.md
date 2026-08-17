@@ -1,6 +1,6 @@
 # Voice Studio — 项目架构与现状总览
 
-> 更新：2026-08-16 · 提交 `98146f1` · 219 个文件入库 · 约 14,000 行代码
+> 更新：2026-08-17。提交号、工作区文件总数和生成物会随开发漂移，本文不把旧快照写成当前仓库事实。
 > 一句话：**本地优先、可插拔的 Windows 实时语音工作台**——麦克风进、变声后的目标音色出（VB-CABLE 虚拟麦克风），ASR/TTS/DSP 全部以独立进程插件的形式自由组合。
 
 ---
@@ -25,7 +25,7 @@
 │  └──────────────────────────┬────────────────────────────────┘  │
 │                             │ Tauri IPC（33 个命令）               │
 │  ┌──────────────────────────┴────────────────────────────────┐  │
-│  │                 Rust 宿主（8 个 crate，5,215 行）             │  │
+│  │                 Rust 宿主（8 个 crate）                       │  │
 │  │  audio-engine ── 设备/采集/播放/无锁Ring/重采样/DSP           │  │
 │  │  pipeline-core ─ 类型化端口/图校验/背压调度/内置节点×15        │  │
 │  │  plugin-host ─── manifest/ZIP安装/worker进程/心跳/崩溃重启     │  │
@@ -45,7 +45,7 @@
                                             └ examples ×5 (gain/文本替换/
                                                测试音/空输出/外部命令)
                                             ——Worker 复用 app/ 的
-                                            Python 引擎（4,461 行，含
+                                            Python 引擎（含
                                             fast-LLM 解码器与增量合并修复）
 ```
 
@@ -69,14 +69,14 @@ VoiceTranslator/
 │  └─ ai/ ×4                # 真实 AI 插件（funasr/cosyvoice/textkit/vc_pitch）
 ├─ app/                     # 既有 Python 语音引擎（被 AI 插件复用：ASR/TTS/断句/标准化）
 ├─ tests/                   # SDK 回环/AI 冒烟/30min soak/历史调参 probe
-├─ scripts/ ×9              # setup/run/diagnose/test/package/create_plugin/make_sha256/…
-├─ docs/ ×13                # 全套文档（本文件 + 12 份专题）
+├─ scripts/                 # setup/run/diagnose/test/package/create_plugin/benchmark/download_models/…
+├─ docs/                    # 架构、构建、协议、测试、治理与历史报告
 ├─ .venv / models/ / deps/  # 本地运行环境与模型（gitignore，不入库）
 ├─ app-data/                # 运行数据：plugins/database/references/logs/…（gitignore）
 └─ dist-package/            # 打包产物 + SHA256SUMS（gitignore）
 ```
 
-代码构成：Rust 5,215 行 · Python 引擎+SDK 4,461 行 · 测试/脚本 1,804 行 · 插件 1,018 行 · Vue/TS 1,599 行 · Proto 174 行 · 文档 1,261 行。
+代码构成以当前工作区结构为准；历史行数统计未作为当前基线或验收证据。
 
 ## 4. 端到端数据流（核心用例）
 
@@ -106,9 +106,18 @@ discover(扫描 plugin.toml) → validate(权限白名单/版本) → install(ZI
  10min 内 5 次封顶) → Shutdown(优雅退出)
 ```
 
-## 6. 验证与质量现状（全部真实数据，可复现）
+## 6. 验证与质量证据边界
 
-### 6.1 测试矩阵（全绿）
+**F9 当前 source gate：PASS。** 2026-08-17 在冻结的 Windows worktree 上，一次性通过 locked
+Rust metadata/fmt/clippy、frozen 前端安装及 typecheck/build、官方 `.\scripts\test.ps1 -SkipAi`
+（21 passed / 0 failed，含 `desktop_e2e_it.rs`、`host_pipeline_it.rs`）和 Python SDK smoke；完整
+命令、exit 与 PRE=POST 指纹见 `docs/TEST_REPORT.md` 第 0 节。
+
+这支持“**本地源码开源就绪**”的技术结论，但不包含 AI/GPU/硬件/麦克风、GUI、正式打包或
+二进制/模型再分发验收。下表是既有 Windows 环境的**历史验证快照**，仅说明覆盖面，不代表
+当前 worktree、clean clone 或发行候选已通过同一矩阵。
+
+### 6.1 历史测试矩阵
 
 | 层 | 内容 | 结果 |
 |---|---|---|
@@ -143,15 +152,15 @@ discover(扫描 plugin.toml) → validate(权限白名单/版本) → install(ZI
 | 常驻显存 | ASR+TTS 6.5GB / 仅 TTS 4.6GB | 8GB 内 | 达成 |
 | 30min 稳定性 | 显存零增长/无漂移 | 无泄漏 | 达成 |
 
-## 7. 交付产物
+## 7. 历史二进制快照与当前源码
 
-| 产物 | 位置 |
-|---|---|
-| NSIS 安装包（4.2MB，不含模型） | `dist-package/Voice Studio_0.1.0_x64-setup.exe`（SHA `D43253D9…`） |
-| Portable ZIP（exe+插件+SDK） | `dist-package/VoiceStudio-Portable.zip`（SHA `446F6733…`） |
-| 源码仓库 | 4 个提交，219 文件，`git log` 干净 |
-| 文档 ×13 | 架构/协议/插件开发/manifest/音频/安全/排障/测试/性能/依赖政策/最终报告/本总览 |
-| 脚本 ×9 | 一键环境/启动/诊断/测试/打包/插件模板/截图/SHA |
+旧报告曾记录 `Voice Studio_0.1.0_x64-setup.exe`、`VoiceStudio-Portable.zip` 及其尺寸/SHA；
+这些只是历史生成物快照，不是本轮 current release evidence，也不表示文件当前存在、可用或
+已发布。当前源码提供可移植构建、测试和打包入口；源码开源就绪与二进制发行是两套门禁。
+
+即使重新生成，Portable ZIP 也只含宿主 exe、插件与 SDK，不含 `.venv`、模型或 Python
+依赖；它是需另配 Python/模型的宿主便携包，不是开箱即用 AI 发行版。二进制再分发、
+第三方许可包、模型权利与发布身份仍须 owner 决定。
 
 ## 8. 已知限制与待办（不隐瞒）
 
@@ -166,10 +175,16 @@ discover(扫描 plugin.toml) → validate(权限白名单/版本) → install(ZI
 ```powershell
 .\scripts\setup.ps1      # 环境+构建+插件安装+冒烟（CosyVoice 仓库自动 clone）
 .\scripts\run.ps1        # 启动桌面应用（release；-Dev 开发模式）
-.\scripts\test.ps1       # 全部测试（-Soak 加 30 分钟长稳）
+.\scripts\test.ps1 -SkipAi  # 贡献者非 AI 基线（含 desktop 标准 integration targets）
 cargo run -p voice-studio-desktop --example manual_test   # 手测自动化 4 项
 .\scripts\create_plugin.ps1 my-plugin -Type tts           # 生成插件模板
 ```
+
+`run.ps1 -Dev` 通过 workspace 内的 Tauri CLI `dev` 入口运行：CLI 管理 Vite dev server（配置的
+`devUrl`）及应用生命周期，并显式使用已解析的 Cargo runner 和 `--locked`（离线时再传
+`--offline`）。默认 `run.ps1` 则是 frozen 前端构建、已解析 Cargo 的 locked release build，
+成功后才启动 release exe；两条路径的失败都不会启动旧应用。这是入口契约说明，不是本轮已
+实际启动 GUI、dev server 或执行完整构建的证据。
 
 首次使用核心用例：声音档案页导入参考 WAV（5~15s 清晰语音）→ 管线工作室加载预置
 「中文语音转目标音色」→ ▶ 启动 → 说话。输出到虚拟麦克风需安装 VB-CABLE

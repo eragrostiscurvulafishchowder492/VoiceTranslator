@@ -40,27 +40,52 @@ pub struct ModelRow {
 impl Store {
     // ---------- settings ----------
     pub fn get_setting(&self, key: &str) -> Option<String> {
-        self.conn.lock().query_row("SELECT value FROM settings WHERE key=?1", params![key], |r| r.get(0))
-            .optional().ok().flatten()
+        self.conn
+            .lock()
+            .query_row(
+                "SELECT value FROM settings WHERE key=?1",
+                params![key],
+                |r| r.get(0),
+            )
+            .optional()
+            .ok()
+            .flatten()
     }
 
     pub fn set_setting(&self, key: &str, value: &str) -> anyhow::Result<()> {
         self.conn.lock().execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
-             ON CONFLICT(key) DO UPDATE SET value=?2", params![key, value])?;
+             ON CONFLICT(key) DO UPDATE SET value=?2",
+            params![key, value],
+        )?;
         Ok(())
     }
 
     // ---------- pipelines ----------
-    pub fn save_pipeline(&self, id: &str, name: &str, graph_json: &str, is_default: bool) -> anyhow::Result<()> {
+    pub fn save_pipeline(
+        &self,
+        id: &str,
+        name: &str,
+        graph_json: &str,
+        is_default: bool,
+    ) -> anyhow::Result<()> {
         self.conn.lock().execute(
             "INSERT INTO pipelines (id, name, graph_json, updated_at, is_default)
              VALUES (?1, ?2, ?3, ?4, ?5)
              ON CONFLICT(id) DO UPDATE SET name=?2, graph_json=?3, updated_at=?4, is_default=?5",
-            params![id, name, graph_json, chrono::Utc::now().to_rfc3339(), is_default as i64])?;
+            params![
+                id,
+                name,
+                graph_json,
+                chrono::Utc::now().to_rfc3339(),
+                is_default as i64
+            ],
+        )?;
         if is_default {
             self.conn.lock().execute(
-                "UPDATE pipelines SET is_default=0 WHERE id<>?1", params![id])?;
+                "UPDATE pipelines SET is_default=0 WHERE id<>?1",
+                params![id],
+            )?;
         }
         Ok(())
     }
@@ -68,14 +93,24 @@ impl Store {
     pub fn list_pipelines(&self) -> Vec<PipelineRow> {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare("SELECT id, name, graph_json, updated_at, is_default FROM pipelines ORDER BY updated_at DESC").unwrap();
-        stmt.query_map([], |r| Ok(PipelineRow {
-            id: r.get(0)?, name: r.get(1)?, graph_json: r.get(2)?,
-            updated_at: r.get(3)?, is_default: r.get::<_, i64>(4)? != 0,
-        })).unwrap().flatten().collect()
+        stmt.query_map([], |r| {
+            Ok(PipelineRow {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                graph_json: r.get(2)?,
+                updated_at: r.get(3)?,
+                is_default: r.get::<_, i64>(4)? != 0,
+            })
+        })
+        .unwrap()
+        .flatten()
+        .collect()
     }
 
     pub fn delete_pipeline(&self, id: &str) -> anyhow::Result<()> {
-        self.conn.lock().execute("DELETE FROM pipelines WHERE id=?1", params![id])?;
+        self.conn
+            .lock()
+            .execute("DELETE FROM pipelines WHERE id=?1", params![id])?;
         Ok(())
     }
 
@@ -103,7 +138,8 @@ impl Store {
     }
 
     pub fn last_session_state(&self) -> String {
-        self.get_setting("last_session_state").unwrap_or_else(|| "unknown".into())
+        self.get_setting("last_session_state")
+            .unwrap_or_else(|| "unknown".into())
     }
 
     // ---------- voice profiles ----------
@@ -119,14 +155,26 @@ impl Store {
     pub fn list_voice_profiles(&self) -> Vec<VoiceProfileRow> {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare("SELECT id, name, ref_path, ref_text, style_json, tags, created_at FROM voice_profiles ORDER BY name").unwrap();
-        stmt.query_map([], |r| Ok(VoiceProfileRow {
-            id: r.get(0)?, name: r.get(1)?, ref_path: r.get(2)?, ref_text: r.get(3)?,
-            style_json: r.get(4)?, tags: r.get(5)?, created_at: r.get(6)?,
-        })).unwrap().flatten().collect()
+        stmt.query_map([], |r| {
+            Ok(VoiceProfileRow {
+                id: r.get(0)?,
+                name: r.get(1)?,
+                ref_path: r.get(2)?,
+                ref_text: r.get(3)?,
+                style_json: r.get(4)?,
+                tags: r.get(5)?,
+                created_at: r.get(6)?,
+            })
+        })
+        .unwrap()
+        .flatten()
+        .collect()
     }
 
     pub fn delete_voice_profile(&self, id: &str) -> anyhow::Result<()> {
-        self.conn.lock().execute("DELETE FROM voice_profiles WHERE id=?1", params![id])?;
+        self.conn
+            .lock()
+            .execute("DELETE FROM voice_profiles WHERE id=?1", params![id])?;
         Ok(())
     }
 
@@ -143,15 +191,26 @@ impl Store {
     pub fn list_models(&self) -> Vec<ModelRow> {
         let conn = self.conn.lock();
         let mut stmt = conn.prepare("SELECT model_id, plugin_id, local_path, size_bytes, license, verified, last_used_at FROM models").unwrap();
-        stmt.query_map([], |r| Ok(ModelRow {
-            model_id: r.get(0)?, plugin_id: r.get(1)?, local_path: r.get(2)?,
-            size_bytes: r.get(3)?, license: r.get(4)?,
-            verified: r.get::<_, i64>(5)? != 0, last_used_at: r.get(6)?,
-        })).unwrap().flatten().collect()
+        stmt.query_map([], |r| {
+            Ok(ModelRow {
+                model_id: r.get(0)?,
+                plugin_id: r.get(1)?,
+                local_path: r.get(2)?,
+                size_bytes: r.get(3)?,
+                license: r.get(4)?,
+                verified: r.get::<_, i64>(5)? != 0,
+                last_used_at: r.get(6)?,
+            })
+        })
+        .unwrap()
+        .flatten()
+        .collect()
     }
 
     pub fn delete_model(&self, model_id: &str) -> anyhow::Result<()> {
-        self.conn.lock().execute("DELETE FROM models WHERE model_id=?1", params![model_id])?;
+        self.conn
+            .lock()
+            .execute("DELETE FROM models WHERE model_id=?1", params![model_id])?;
         Ok(())
     }
 
@@ -159,21 +218,26 @@ impl Store {
     pub fn add_event(&self, kind: &str, detail: &str) {
         let _ = self.conn.lock().execute(
             "INSERT INTO recent_events (at, kind, detail) VALUES (?1, ?2, ?3)",
-            params![chrono::Utc::now().to_rfc3339(), kind, detail]);
+            params![chrono::Utc::now().to_rfc3339(), kind, detail],
+        );
     }
 
     pub fn recent_events(&self, limit: u32) -> Vec<(String, String, String)> {
         let conn = self.conn.lock();
-        let mut stmt = conn.prepare(
-            "SELECT at, kind, detail FROM recent_events ORDER BY id DESC LIMIT ?1").unwrap();
+        let mut stmt = conn
+            .prepare("SELECT at, kind, detail FROM recent_events ORDER BY id DESC LIMIT ?1")
+            .unwrap();
         stmt.query_map(params![limit], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
-            .unwrap().flatten().collect()
+            .unwrap()
+            .flatten()
+            .collect()
     }
 
     pub fn save_benchmark(&self, kind: &str, results_json: &str) -> anyhow::Result<()> {
         self.conn.lock().execute(
             "INSERT INTO benchmarks (at, kind, results_json) VALUES (?1, ?2, ?3)",
-            params![chrono::Utc::now().to_rfc3339(), kind, results_json])?;
+            params![chrono::Utc::now().to_rfc3339(), kind, results_json],
+        )?;
         Ok(())
     }
 }

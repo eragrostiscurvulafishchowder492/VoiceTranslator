@@ -143,9 +143,13 @@ impl Payload {
         match self {
             Payload::Audio(_) => PortType::AudioPcm,
             Payload::Text(t) => {
-                if t.is_final { PortType::TextFinal }
-                else if t.is_partial { PortType::TextPartial }
-                else { PortType::TextSegment }
+                if t.is_final {
+                    PortType::TextFinal
+                } else if t.is_partial {
+                    PortType::TextPartial
+                } else {
+                    PortType::TextSegment
+                }
             }
             Payload::TtsRequest(_) => PortType::TtsRequest,
             Payload::Control(_) => PortType::ControlSignal,
